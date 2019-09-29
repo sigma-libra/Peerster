@@ -1,13 +1,13 @@
-package gossiper
+package main
 //./gossiper -UIPort=10000 -gossipAddr=127.0.0.1:5000 -name=nodeA
 // -peers=127.0.0.1:5001,10.1.1.7:5002 -simple
 
 import (
 	"flag"
+	"github.com/dedis/protobuf"
 	"net"
 	"strconv"
 	"strings"
-	"github.com/dedis/protobuf"
 )
 
 type SimpleMessage struct {
@@ -24,13 +24,14 @@ type GossipPacket struct {
 var name *string
 var gossipAddr *string
 var knownPeers []string
+var uiport *string
 
 const clientAddress = "127.0.0.1"
-var clientPort int
 
 
 func main() {
-	uiport := flag.String("UIPort",
+
+	uiport = flag.String("UIPort",
 		"8080", "port for the UI client (default \"8080\")")
 	gossipAddr = flag.String("gossipAddr",
 		"127.0.0.1:5000", "ip:port for the gossiper (default \"127.0.0.1:5000\")")
@@ -39,8 +40,6 @@ func main() {
 	simple := flag.Bool("simple", false, "run gossiper in simple broadcast mode")
 
 	flag.Parse()
-
-	clientPort, _ = strconv.Atoi(*uiport)
 
 	gossip := NewGossiper(*gossipAddr, *name)
 
@@ -55,7 +54,9 @@ func main() {
 
 func handleMessagesFrom(gossip *Gossiper, finish <-chan bool) {
 
-	fromClient := (gossip.address.IP.Equal(net.ParseIP(clientAddress)) && gossip.address.Port == clientPort)
+	gossipedIP := gossip.address.IP.String()
+	gossipedPort := strconv.Itoa(gossip.address.Port)
+	fromClient := (gossipedIP == clientAddress) && (gossipedPort == *uiport)
 
 	var originalRelay string
 	var msg *GossipPacket

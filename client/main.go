@@ -1,12 +1,12 @@
-package client
+package main
 
 //./client -UIPort=10000 -msg=Hello
 
 import (
 	"flag"
-	"net"
 	"github.com/SabrinaKall/Peerster/gossiper"
 	"github.com/dedis/protobuf"
+	"net"
 )
 
 func main() {
