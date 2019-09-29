@@ -8,6 +8,8 @@ import (
 	"net"
 	"strconv"
 	"sync"
+
+	"github.com/SabrinaKall/Peerster/udp"
 )
 
 func main() {
@@ -28,7 +30,7 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	channelForMessages, _, _ := InitListening(&wg, gossiper.conn)
+	channelForMessages, _, _ := udp.InitListening(&wg, gossiper.conn)
 
 	msg := <-channelForMessages
 

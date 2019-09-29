@@ -1,4 +1,4 @@
-package gossiper
+package udp
 
 // sources: https://holwech.github.io/blog/Creating-a-simple-UDP-module/
 import (
