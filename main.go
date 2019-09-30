@@ -8,7 +8,9 @@ import (
 	"github.com/dedis/protobuf"
 	"net"
 	"strings"
+	"time"
 )
+
 
 type SimpleMessage struct {
 	OriginalName  string
@@ -19,6 +21,7 @@ type SimpleMessage struct {
 type GossipPacket struct {
 	Simple *SimpleMessage
 }
+
 
 var name *string
 var gossipAddr *string
@@ -47,8 +50,9 @@ func main() {
 	knownPeers = strings.Split(*peers, ",")
 
 	if *simple {
-		go handleMessagesFrom(clientGossip, true)
 		go handleMessagesFrom(peerGossip, false)
+		go handleMessagesFrom(clientGossip, true)
+		time.Sleep(10 * time.Second)
 
 	}
 
@@ -62,41 +66,56 @@ func handleMessagesFrom(gossip *Gossiper, isClient bool) {
 		packetBytes := make([]byte, 1024)
 		_, _, err := gossip.conn.ReadFromUDP(packetBytes)
 		if err != nil {
-			print(err.Error())
+			panic("Gossiper Read Error: " + err.Error() + "\n")
 		}
 
-		var msg GossipPacket
-		err = protobuf.Decode(packetBytes, &msg)
-		if err != nil {
-			print(err.Error())
-		}
+		pkt := GossipPacket{}
+		protobuf.Decode(packetBytes, &pkt)
+		/*if err != nil {
+			panic("Gossiper Protobuf Decode Error: " + err.Error() + "\n")
+		} else {
+			print("Fine\n")
+		}*/
 
-		originalRelay := msg.Simple.RelayPeerAddr
+		msg := pkt.Simple
+		newOriginalName := msg.OriginalName
+		newRelayPeerAddr := msg.RelayPeerAddr
+		newContents := msg.Contents
+
+		originalRelay := msg.RelayPeerAddr
 
 		if isClient {
-			print("CLIENT MESSAGE "+ msg.Simple.Contents)
-			msg.Simple.OriginalName = *name
-			msg.Simple.RelayPeerAddr = *gossipAddr
+			print("CLIENT MESSAGE "+ msg.Contents + "\n")
+			newOriginalName = *name
+			newRelayPeerAddr = *gossipAddr
 
 		} else {
 			print("SIMPLE MESSAGE origin " +
-				msg.Simple.OriginalName + " from " +
-				msg.Simple.RelayPeerAddr + " contents " + msg.Simple.Contents)
+				msg.OriginalName + " from " +
+				msg.RelayPeerAddr + " contents " + msg.Contents + "\n")
 
-			if !stringInSlice(msg.Simple.RelayPeerAddr, knownPeers) {
-				knownPeers = append(knownPeers, msg.Simple.RelayPeerAddr)
+			if !stringInSlice(msg.RelayPeerAddr, knownPeers) {
+				knownPeers = append(knownPeers, msg.RelayPeerAddr)
 			}
-			msg.Simple.RelayPeerAddr = *gossipAddr
+			newRelayPeerAddr = *gossipAddr
 		}
-		print("PEERS " + formatPeers(knownPeers))
+		print("PEERS\n" + formatPeers(knownPeers) + "\n")
+
+		newMsg := SimpleMessage{newOriginalName, newRelayPeerAddr, newContents}
 
 
-		packetBytes, _ = protobuf.Encode(msg)
+		newPacketBytes, err := protobuf.Encode(&GossipPacket{&newMsg})
+		if err != nil {
+			panic("Gossiper Encode Error: " + err.Error() + "\n")
+		}
 
 		for _, dst := range knownPeers {
 			if dst != originalRelay {
 				udpAddr, _ := net.ResolveUDPAddr("udp4", dst)
-				gossip.conn.WriteToUDP(packetBytes, udpAddr)
+				_, err = gossip.conn.WriteToUDP(newPacketBytes, udpAddr)
+				if err != nil {
+					print("Gossiper Write to UDP Error: " + err.Error() + "\n")
+				}
 			}
 		}
 
@@ -106,9 +125,9 @@ func handleMessagesFrom(gossip *Gossiper, isClient bool) {
 func formatPeers(peerSlice[]string) string {
 	peers := ""
 	for _, peer := range peerSlice {
-		peers = peers + peer + ", "
+		peers = peers + peer + ","
 	}
-	peers = peers[:len(peers)-2]
+	peers = peers[:len(peers)-1]
 	return peers
 }
 
@@ -120,8 +139,6 @@ func stringInSlice(a string, list []string) bool {
 	}
 	return false
 }
-
-//packetToSend := GossipPacket{Simple: simplemessage}
 
 type Gossiper struct {
 	address *net.UDPAddr

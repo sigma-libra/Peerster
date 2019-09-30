@@ -19,7 +19,7 @@ gossipPort=5000
 name='A'
 
 # General peerster (gossiper) command
-#./Peerster -UIPort=12345 -gossipPort=127.0.0.1:5001 -name=A -peers=127.0.0.1:5002 > A.out &
+#./Peerster -UIPort=12345 -gossipAddr=127.0.0.1:5001 -name=A -peers=127.0.0.1:5002 > A.out &
 
 for i in `seq 1 10`;
 do
@@ -27,7 +27,7 @@ do
 	peerPort=$((($gossipPort+1)%10+5000))
 	peer="127.0.0.1:$peerPort"
 	gossipAddr="127.0.0.1:$gossipPort"
-	./Peerster -UIPort=$UIPort -gossipAddr=$gossipAddr -name=$name -simple -peers=$peer > $outFileName &
+	./Peerster -UIPort=$UIPort -gossipAddr=$gossipAddr -name=$name -simple -peers=$peer &> $outFileName &
 	outputFiles+=("$outFileName")
 	if [[ "$DEBUG" == "true" ]] ; then
 		echo "$name running at UIPort $UIPort and gossipPort $gossipPort"
@@ -80,12 +80,15 @@ do
 	fi
 	gossipPort=$(($gossipPort+1))
 	if !(grep -q "$msgLine" "${outputFiles[$i]}") ; then
+		echo "failed 1"
    		failed="T"
 	fi
 	if !(grep -q "$peersLine" "${outputFiles[$i]}") ; then
+		echo "failed 2"
         failed="T"
     fi
 	if !(grep -q "$msgLine2" "${outputFiles[$i]}") ; then
+		echo "failed 3"
         failed="T"
     fi
 done
