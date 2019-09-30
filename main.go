@@ -1,4 +1,5 @@
 package main
+
 //./gossiper -UIPort=10000 -gossipAddr=127.0.0.1:5000 -name=nodeA
 // -peers=127.0.0.1:5001,10.1.1.7:5002 -simple
 
@@ -6,7 +7,6 @@ import (
 	"flag"
 	"github.com/dedis/protobuf"
 	"net"
-	"strconv"
 	"strings"
 )
 
@@ -20,7 +20,6 @@ type GossipPacket struct {
 	Simple *SimpleMessage
 }
 
-
 var name *string
 var gossipAddr *string
 var knownPeers []string
@@ -28,8 +27,9 @@ var uiport *string
 
 const clientAddress = "127.0.0.1"
 
-
 func main() {
+
+	//logger := log.New(os.Stdout, "", 0)
 
 	uiport = flag.String("UIPort",
 		"8080", "port for the UI client (default \"8080\")")
@@ -41,63 +41,75 @@ func main() {
 
 	flag.Parse()
 
-	gossip := NewGossiper(*gossipAddr, *name)
+	peerGossip := NewGossiper(*gossipAddr, *name)
+	clientGossip := NewGossiper(clientAddress+":"+*uiport, *name)
 
 	knownPeers = strings.Split(*peers, ",")
 
 	if *simple {
-		stopLoopChannel := make(chan bool, 1)
-		go handleMessagesFrom(gossip, stopLoopChannel)
+		go handleMessagesFrom(clientGossip, true)
+		go handleMessagesFrom(peerGossip, false)
+
 	}
 
 }
 
-func handleMessagesFrom(gossip *Gossiper, finish <-chan bool) {
 
-	gossipedIP := gossip.address.IP.String()
-	gossipedPort := strconv.Itoa(gossip.address.Port)
-	fromClient := (gossipedIP == clientAddress) && (gossipedPort == *uiport)
+func handleMessagesFrom(gossip *Gossiper, isClient bool) {
 
-	var originalRelay string
-	var msg *GossipPacket
 	for {
-		select {
-		case <-finish:
-			gossip.conn.Close()
-			return
-		default:
-			packetBytes := make([]byte, 1024)
-			gossip.conn.ReadFromUDP(packetBytes)
-			protobuf.Decode(packetBytes, msg)
-			originalRelay = msg.Simple.RelayPeerAddr
-			if fromClient {
-				print("CLIENT MESSAGE " + msg.Simple.Contents)
-				msg.Simple.OriginalName = *name
-				msg.Simple.RelayPeerAddr = *gossipAddr
 
-			} else {
-				print("SIMPLE MESSAGE origin " +
-					msg.Simple.OriginalName + " from " +
-					msg.Simple.RelayPeerAddr + " contents " + msg.Simple.Contents)
-
-				originalRelay := msg.Simple.RelayPeerAddr
-				if !stringInSlice(originalRelay, knownPeers) {
-					knownPeers = append(knownPeers, msg.Simple.RelayPeerAddr)
-				}
-				msg.Simple.RelayPeerAddr = *gossipAddr
-			}
-
-			packetBytes, _ = protobuf.Encode(msg)
-
-			for _, dst := range knownPeers {
-				if dst != originalRelay {
-					udpAddr, _ := net.ResolveUDPAddr("udp4", dst)
-					gossip.conn.WriteToUDP(packetBytes, udpAddr)
-				}
-			}
-
+		packetBytes := make([]byte, 1024)
+		_, _, err := gossip.conn.ReadFromUDP(packetBytes)
+		if err != nil {
+			print(err.Error())
 		}
+
+		var msg GossipPacket
+		err = protobuf.Decode(packetBytes, &msg)
+		if err != nil {
+			print(err.Error())
+		}
+
+		originalRelay := msg.Simple.RelayPeerAddr
+
+		if isClient {
+			print("CLIENT MESSAGE "+ msg.Simple.Contents)
+			msg.Simple.OriginalName = *name
+			msg.Simple.RelayPeerAddr = *gossipAddr
+
+		} else {
+			print("SIMPLE MESSAGE origin " +
+				msg.Simple.OriginalName + " from " +
+				msg.Simple.RelayPeerAddr + " contents " + msg.Simple.Contents)
+
+			if !stringInSlice(msg.Simple.RelayPeerAddr, knownPeers) {
+				knownPeers = append(knownPeers, msg.Simple.RelayPeerAddr)
+			}
+			msg.Simple.RelayPeerAddr = *gossipAddr
+		}
+		print("PEERS " + formatPeers(knownPeers))
+
+
+		packetBytes, _ = protobuf.Encode(msg)
+
+		for _, dst := range knownPeers {
+			if dst != originalRelay {
+				udpAddr, _ := net.ResolveUDPAddr("udp4", dst)
+				gossip.conn.WriteToUDP(packetBytes, udpAddr)
+			}
+		}
+
 	}
+}
+
+func formatPeers(peerSlice[]string) string {
+	peers := ""
+	for _, peer := range peerSlice {
+		peers = peers + peer + ", "
+	}
+	peers = peers[:len(peers)-2]
+	return peers
 }
 
 func stringInSlice(a string, list []string) bool {
@@ -118,11 +130,18 @@ type Gossiper struct {
 }
 
 func NewGossiper(address, name string) *Gossiper {
-	udpAddr, _ := net.ResolveUDPAddr("udp4", address)
+	udpAddr, err := net.ResolveUDPAddr("udp4", address)
+	if err != nil {
+		print("Gossiper Error Resolve Address: " + err.Error() + "\n")
+	}
 
-	udpConn, _ := net.ListenUDP("udp4", udpAddr)
+	udpConn, err := net.ListenUDP("udp4", udpAddr)
+	if err != nil {
+		print("Gossiper Error Listen UDP: " + err.Error() + "\n")
+	}
 	return &Gossiper{
 		address: udpAddr,
 		conn:    udpConn,
 		Name:    name}
 }
+

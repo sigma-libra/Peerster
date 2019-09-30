@@ -7,7 +7,7 @@ cd ..
 
 RED='\033[0;31m'
 NC='\033[0m'
-DEBUG="false"
+DEBUG="true"
 
 outputFiles=()
 message=Weather_is_clear
@@ -47,10 +47,12 @@ pkill -f Peerster
 failed="F"
 
 if !(grep -q "CLIENT MESSAGE $message" "E.out") ; then
+	echo "E failed"
 	failed="T"
 fi
 
 if !(grep -q "CLIENT MESSAGE $message2" "B.out") ; then
+  echo "B failed"
   failed="T"
 fi
 

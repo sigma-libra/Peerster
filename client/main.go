@@ -4,10 +4,19 @@ package main
 
 import (
 	"flag"
-	"github.com/SabrinaKall/Peerster/gossiper"
 	"github.com/dedis/protobuf"
 	"net"
 )
+
+type SimpleMessage struct {
+	OriginalName  string
+	RelayPeerAddr string
+	Contents      string
+}
+
+type GossipPacket struct {
+	Simple *SimpleMessage
+}
 
 func main() {
 	uiport := flag.String("UIPort",
@@ -16,12 +25,24 @@ func main() {
 
 	flag.Parse()
 
-	simplePacket := gossiper.SimpleMessage{"","",*msg}
-	packetToSend, _ := protobuf.Encode(gossiper.GossipPacket{&simplePacket})
+	simplePacket := SimpleMessage{"","",*msg}
+	packetToSend, err := protobuf.Encode(&GossipPacket{&simplePacket})
+	if err != nil {
+		print("Client Encode Error: " +  err.Error() + "\n")
+	}
 
-	udpAddr, _ := net.ResolveUDPAddr("udp4", "127.0.0.1:" + *uiport)
-	udpConn, _ := net.ListenUDP("udp4", udpAddr)
-	udpConn.WriteToUDP(packetToSend, udpAddr)
+	udpAddr, err := net.ResolveUDPAddr("udp4", "127.0.0.1:" + *uiport)
+	if err != nil {
+		print("Client Resolve Addr Error: " + err.Error() + "\n")
+	}
+	udpConn, err := net.ListenUDP("udp4", udpAddr)
+	if err != nil {
+		print("Client ListenUDP Error: " +  err.Error() + "\n")
+	}
+	_, err = udpConn.WriteToUDP(packetToSend, udpAddr)
+	if err != nil {
+		print("Client Write To UDP: " + err.Error() + "\n")
+	}
 
 
 }
