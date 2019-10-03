@@ -14,18 +14,17 @@ func formatPeers(peerSlice []string) string {
 	return peers
 }
 
-func getAndDecodePacket(gossip *Gossiper) GossipPacket {
+func getAndDecodePacket(gossip *Gossiper) (GossipPacket, string) {
 	packetBytes := make([]byte, 1024)
-	_, _, err := gossip.conn.ReadFromUDP(packetBytes)
+	_, sender, err := gossip.conn.ReadFromUDP(packetBytes)
 	if err != nil {
 		panic("Gossiper Read Error: " + err.Error() + "\n")
 	}
 
 	pkt := GossipPacket{}
 	protobuf.Decode(packetBytes, &pkt)
-	return pkt
+	return pkt, sender.String()
 }
-
 
 func sendPacket(pkt []byte, dst string, gossip *Gossiper) {
 	udpAddr, _ := net.ResolveUDPAddr("udp4", dst)
@@ -40,7 +39,7 @@ func isRumorPacket(pkt GossipPacket) bool {
 	pktHasRumorMsg := (pkt.Simple == nil) && (pkt.Rumor != nil) && (pkt.Status == nil)
 	pktHasStatusMsg := (pkt.Simple == nil) && (pkt.Rumor == nil) && (pkt.Status != nil)
 
-	if !pktHasSimpleMsg && ! pktHasRumorMsg && ! pktHasStatusMsg {
+	if !pktHasSimpleMsg && !pktHasRumorMsg && !pktHasStatusMsg {
 		panic("Packet has no message")
 	}
 

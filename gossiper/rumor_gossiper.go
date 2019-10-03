@@ -1,49 +1,58 @@
 package gossiper
 
 import (
-	"fmt"
-	"github.com/SabrinaKall/Peerster/helper"
 	"github.com/dedis/protobuf"
 	"math/rand"
-	"net"
-	"time"
 )
 
 func HandleRumorMessagesFrom(gossip *Gossiper, name string, gossipAddr string, knownPeers []string, isClient bool) {
 
 	wantMap := make(map[string]PeerStatus)
-	bufferedMsgs := make(map[string][]RumorMessage)
+	orderedMessages := make(map[string][]RumorMessage)
+	earlyMessages := make(map[string][]RumorMessage)
+
+	rumorTracker := make(map[string]RumorMessage)
 
 	for {
 
-		pkt := getAndDecodePacket(gossip)
+		pkt, sender := getAndDecodePacket(gossip)
 
 		isRumorPkt := isRumorPacket(pkt)
 
 		if isRumorPkt {
 			msg := pkt.Rumor
 
+			if isClient {
+				msg.Origin = name
+			}
+
 			receivedBefore := (wantMap[msg.Origin].NextID > msg.ID)
 
 			if !receivedBefore {
-				s1 := rand.NewSource(time.Now().UnixNano())
-				r1 := rand.New(s1)
-				randomPeer := knownPeers[r1.Intn(len(knownPeers))]
+				randomPeer := knownPeers[rand.Intn(len(knownPeers))]
 				newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: msg})
 				if err != nil {
 					println("Gossiper Encode Error: " + err.Error())
 				}
 
 				sendPacket(newEncoded, randomPeer, gossip)
+				rumorTracker[randomPeer] = *msg
 
 				if wantMap[msg.Origin].NextID == msg.ID {
 					wantMap[msg.Origin] = PeerStatus{
 						Identifier: msg.Origin,
-						NextID:     msg.ID,
+						NextID:     msg.ID + 1,
 					}
-					fastForward(wantMap, bufferedMsgs[msg.Origin])
+					orderedMessages[msg.Origin] = append(orderedMessages[msg.Origin], *msg)
+					newNext, newUndelivered, newDelivered := fastForward(msg.Origin, wantMap[msg.Origin].NextID, earlyMessages[msg.Origin], orderedMessages[msg.Origin])
+					wantMap[msg.Origin] = PeerStatus{
+						Identifier: msg.Origin,
+						NextID:     newNext,
+					}
+					orderedMessages[msg.Origin] = newDelivered
+					earlyMessages[msg.Origin] = newUndelivered
 				} else {
-					bufferedMsgs[msg.Origin] = append(bufferedMsgs[msg.Origin], *msg)
+					earlyMessages[msg.Origin] = append(earlyMessages[msg.Origin], *msg)
 
 				}
 
@@ -51,50 +60,78 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, gossipAddr string, k
 
 		} else {
 			msg := pkt.Status
-		}
+			for _, wanted := range msg.Want {
+				if wantMap[wanted.Identifier].NextID > wanted.NextID {
+					//I have more messages
+					msgToSend := orderedMessages[wanted.Identifier][wanted.NextID]
+					rumorEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &msgToSend})
+					if err != nil {
+						println("Gossiper Encode Error: " + err.Error())
+					}
+					sendPacket(rumorEncoded, sender, gossip)
+					break //only send one
 
+				} else if wantMap[wanted.Identifier].NextID < wanted.NextID {
+					//I have fewer messages
+					wants := make([]PeerStatus, 0)
+					for _, ps := range wantMap {
+						wants = append(wants, ps)
+					}
+					wantPacket := StatusPacket{Want: wants}
+					statusEncoded, err := protobuf.Encode(&GossipPacket{Status: &wantPacket})
+					if err != nil {
+						println("Gossiper Encode Error: " + err.Error())
+					}
+					sendPacket(statusEncoded, sender, gossip)
+					break //only send one
 
-		originalRelay := msg.RelayPeerAddr
+				} else {
+					//coin flip
+					originalMessage := rumorTracker[sender]
+					coin := rand.Int() % 2
+					heads := coin == 1
+					if heads {
+						randomPeer := knownPeers[rand.Intn(len(knownPeers))]
+						newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &originalMessage})
+						if err != nil {
+							println("Gossiper Encode Error: " + err.Error())
+						}
+						sendPacket(newEncoded, randomPeer, gossip)
+						break
+					}
 
-		if isClient {
-			fmt.Println("CLIENT MESSAGE " + msg.Contents)
-			msg.OriginalName = name
-			msg.RelayPeerAddr = gossipAddr
-
-		} else {
-			fmt.Println("SIMPLE MESSAGE origin " +
-				msg.OriginalName + " from " +
-				msg.RelayPeerAddr + " contents " + msg.Contents)
-
-			if !helper.StringInSlice(msg.RelayPeerAddr, knownPeers) {
-				knownPeers = append(knownPeers, msg.RelayPeerAddr)
-			}
-			msg.RelayPeerAddr = gossipAddr
-		}
-		fmt.Println("PEERS\n" + formatPeers(knownPeers))
-
-		newPacketBytes, err := protobuf.Encode(&GossipPacket{Simple: msg})
-		if err != nil {
-			println("Gossiper Encode Error: " + err.Error())
-		}
-
-		for _, dst := range knownPeers {
-			if dst != originalRelay {
-				udpAddr, _ := net.ResolveUDPAddr("udp4", dst)
-				_, err = gossip.conn.WriteToUDP(newPacketBytes, udpAddr)
-				if err != nil {
-					println("Gossiper Write to UDP Error: " + err.Error())
 				}
 			}
 		}
-
 	}
 }
 
-func fastForward(statuses map[string]PeerStatus, messages []RumorMessage) (map[string]PeerStatus, []RumorMessage) {
+func fastForward(origin string, currentNext uint32, undelivered []RumorMessage, ordered []RumorMessage) (uint32, []RumorMessage, []RumorMessage) {
 	updated := false
-	for
+	indexesDelivered := make([]int, 0)
+	for {
+		for i, savedMsg := range undelivered {
+			if savedMsg.ID == currentNext {
+				currentNext += 1
+				updated = true
+				indexesDelivered = append(indexesDelivered, i)
+				ordered = append(ordered, savedMsg)
+			}
 
-	return statuses, messages
+		}
+		if !updated {
+			break
+		} else {
+			updated = false
+		}
+	}
+	for _, index := range indexesDelivered {
+		undelivered = RemoveIndex(undelivered, index)
+	}
+	return currentNext, undelivered, ordered
 
+}
+
+func RemoveIndex(s []RumorMessage, index int) []RumorMessage {
+	return append(s[:index], s[index+1:]...)
 }
