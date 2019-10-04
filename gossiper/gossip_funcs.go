@@ -5,7 +5,7 @@ import (
 	"net"
 )
 
-func formatPeers(peerSlice []string) string {
+func FormatPeers(peerSlice []string) string {
 	peers := ""
 	for _, peer := range peerSlice {
 		peers = peers + peer + ","
@@ -27,7 +27,7 @@ func getAndDecodePacket(gossip *Gossiper) (GossipPacket, string) {
 }
 
 func sendPacket(pkt []byte, dst string, gossip *Gossiper) {
-	udpAddr, err := net.ResolveUDPAddr("udp", dst)
+	udpAddr, err := net.ResolveUDPAddr("udp4", dst)
 	if err != nil {
 		println("Gossiper Funcs Resolve UDP Address Error: " + err.Error())
 	}

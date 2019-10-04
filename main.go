@@ -5,52 +5,46 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"github.com/SabrinaKall/Peerster/gossiper"
 	"strings"
 	"time"
 )
 
+var name *string
+var gossipAddr *string
+var knownPeers []string
+var uiport *string
 
 const clientAddress = "127.0.0.1"
 
 func main() {
 
-	uiPort := flag.String("UIPort",
+	uiport = flag.String("UIPort",
 		"8080", "port for the UI client (default \"8080\")")
-	gossipAddr := flag.String("gossipAddr",
+	gossipAddr = flag.String("gossipAddr",
 		"127.0.0.1:5000", "ip:port for the gossiper (default \"127.0.0.1:5000\")")
-	name := flag.String("name", "", "name of the gossiper")
+	name = flag.String("name", "", "name of the gossiper")
 	peers := flag.String("peers", "", "comma separated list of peers of the form ip:port")
 	simple := flag.Bool("simple", false, "run gossiper in simple broadcast mode")
 
 	flag.Parse()
 
 	peerGossip := gossiper.NewGossiper(*gossipAddr, *name)
-	clientGossip := gossiper.NewGossiper(clientAddress+":"+*uiPort, *name)
+	clientGossip := gossiper.NewGossiper(clientAddress+":"+*uiport, *name)
 
-	knownPeers := strings.Split(*peers, ",")
+	knownPeers = strings.Split(*peers, ",")
 
 	if *simple {
-			printChan := make(chan string, 10)
-			peerSharingChan := make(chan string)
-			go gossiper.HandleSimpleMessagesFrom(printChan, peerGossip, peerGossip, *name, knownPeers, false, peerSharingChan)
-			go gossiper.HandleSimpleMessagesFrom(printChan, clientGossip, peerGossip, *name, knownPeers, true, peerSharingChan)
+		peerSharingChan := make(chan string, 1000)
+		go gossiper.HandleSimpleMessagesFrom(peerGossip, false, name, gossipAddr, knownPeers, peerSharingChan)
+		go gossiper.HandleSimpleMessagesFrom(clientGossip, true, name, gossipAddr, knownPeers, peerSharingChan)
 
-			for {
-				select {
-				case printMsg := <-printChan:
-					fmt.Println(printMsg)
-				default:
-					time.Sleep(2 * time.Second)
-				}
-			}
+		for {
+			time.Sleep(2 * time.Millisecond)
+		}
 
 	} else {
 
 	}
 
 }
-
-
-

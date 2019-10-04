@@ -1,18 +1,21 @@
 package gossiper
 
 import (
+	"fmt"
 	"github.com/SabrinaKall/Peerster/helper"
 	"github.com/dedis/protobuf"
 )
 
-func HandleSimpleMessagesFrom(print chan string, gossip *Gossiper, outGossip *Gossiper, name string, knownPeers []string,
-	isClient bool, peerSharingChan chan string) {
 
-	gossipAddr := gossip.address.String()
+func HandleSimpleMessagesFrom(gossip *Gossiper, isClient bool, name *string, gossipAddr *string, knownPeers []string, peerSharingChan chan string) {
+
 	for {
 
 		pkt, _ := getAndDecodePacket(gossip)
 		msg := pkt.Simple
+		newOriginalName := msg.OriginalName
+		newRelayPeerAddr := msg.RelayPeerAddr
+		newContents := msg.Contents
 
 		originalRelay := msg.RelayPeerAddr
 
@@ -20,14 +23,16 @@ func HandleSimpleMessagesFrom(print chan string, gossip *Gossiper, outGossip *Go
 			select {
 			case newPeer := <-peerSharingChan:
 				knownPeers = append(knownPeers, newPeer)
+
 			default:
-				print <- ("CLIENT MESSAGE " + msg.Contents)
-				msg.OriginalName = name
-				msg.RelayPeerAddr = gossipAddr
+
 			}
+			fmt.Println("CLIENT MESSAGE " + msg.Contents)
+			newOriginalName = *name
+			newRelayPeerAddr = *gossipAddr
 
 		} else {
-			print <- ("SIMPLE MESSAGE origin " +
+			fmt.Println("SIMPLE MESSAGE origin " +
 				msg.OriginalName + " from " +
 				msg.RelayPeerAddr + " contents " + msg.Contents)
 
@@ -35,18 +40,20 @@ func HandleSimpleMessagesFrom(print chan string, gossip *Gossiper, outGossip *Go
 				knownPeers = append(knownPeers, msg.RelayPeerAddr)
 				peerSharingChan <- msg.RelayPeerAddr
 			}
-			msg.RelayPeerAddr = gossipAddr
+			newRelayPeerAddr = *gossipAddr
 		}
-		print <- ("PEERS\n" + formatPeers(knownPeers))
+		fmt.Println("PEERS\n" + FormatPeers(knownPeers))
 
-		newPacketBytes, err := protobuf.Encode(&GossipPacket{Simple: msg})
+		newMsg := SimpleMessage{newOriginalName, newRelayPeerAddr, newContents}
+
+		newPacketBytes, err := protobuf.Encode(&GossipPacket{Simple: &newMsg})
 		if err != nil {
-			println("Gossiper Encode Error: " + err.Error())
+			panic("Gossiper Encode Error: " + err.Error() + "\n")
 		}
 
 		for _, dst := range knownPeers {
 			if dst != originalRelay {
-				sendPacket(newPacketBytes, dst, outGossip)
+				sendPacket(newPacketBytes, dst, gossip)
 			}
 		}
 
