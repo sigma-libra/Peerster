@@ -5,6 +5,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/SabrinaKall/Peerster/gossiper"
 	"strings"
 	"time"
@@ -31,10 +32,19 @@ func main() {
 	knownPeers := strings.Split(*peers, ",")
 
 	if *simple {
-		peerSharingChan := make(chan string)
-		go gossiper.HandleSimpleMessagesFrom(peerGossip, *name, *gossipAddr, knownPeers, false, peerSharingChan)
-		go gossiper.HandleSimpleMessagesFrom(clientGossip, *name, *gossipAddr, knownPeers,true, peerSharingChan)
-		time.Sleep(10 * time.Second)
+			printChan := make(chan string, 10)
+			peerSharingChan := make(chan string)
+			go gossiper.HandleSimpleMessagesFrom(printChan, peerGossip, peerGossip, *name, knownPeers, false, peerSharingChan)
+			go gossiper.HandleSimpleMessagesFrom(printChan, clientGossip, peerGossip, *name, knownPeers, true, peerSharingChan)
+
+			for {
+				select {
+				case printMsg := <-printChan:
+					fmt.Println(printMsg)
+				default:
+					time.Sleep(2 * time.Second)
+				}
+			}
 
 	} else {
 

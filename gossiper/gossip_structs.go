@@ -1,6 +1,8 @@
 package gossiper
 
-import "net"
+import (
+	"net"
+)
 
 type RumorMessage struct {
 	Origin string
@@ -35,15 +37,21 @@ type Gossiper struct {
 	Name    string
 }
 
+type GossipWaiter struct {
+	dst  string
+	done chan bool
+	msg  RumorMessage
+}
+
 func NewGossiper(address, name string) *Gossiper {
 	udpAddr, err := net.ResolveUDPAddr("udp4", address)
 	if err != nil {
-		print("Gossiper Error Resolve Address: " + err.Error() + "\n")
+		println("Gossiper Error Resolve Address: " + err.Error())
 	}
 
 	udpConn, err := net.ListenUDP("udp4", udpAddr)
 	if err != nil {
-		print("Gossiper Error Listen UDP: " + err.Error() + "\n")
+		println("Gossiper Error Listen UDP: " + err.Error())
 	}
 	return &Gossiper{
 		address: udpAddr,

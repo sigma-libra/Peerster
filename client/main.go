@@ -36,13 +36,13 @@ func main() {
 	msgTest := GossipPacket{}
 	err = protobuf.Decode(packetToSend, &msgTest)
 	if err != nil {
-		print("Client Protobuf Decode Error: " + err.Error() + "\n")
+		println("Client Protobuf Decode Error: " + err.Error())
 	}
 
 	clientUdpAddr, err := net.ResolveUDPAddr("udp4", clientAddr)
 	gossiperUdpAddr, err := net.ResolveUDPAddr("udp4", "127.0.0.1:"+*uiport)
 	if err != nil {
-		print("Client Resolve Addr Error: " + err.Error() + "\n")
+		println("Client Resolve Addr Error: " + err.Error())
 	}
 	udpConn, err := net.ListenUDP("udp4", clientUdpAddr)
 	if err != nil {
@@ -50,7 +50,7 @@ func main() {
 	}
 	_, err = udpConn.WriteToUDP(packetToSend, gossiperUdpAddr)
 	if err != nil {
-		print("Client Write To UDP: " + err.Error() + "\n")
+		println("Client Write To UDP: " + err.Error())
 	}
 
 }

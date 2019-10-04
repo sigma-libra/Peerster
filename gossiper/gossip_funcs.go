@@ -18,7 +18,7 @@ func getAndDecodePacket(gossip *Gossiper) (GossipPacket, string) {
 	packetBytes := make([]byte, 1024)
 	_, sender, err := gossip.conn.ReadFromUDP(packetBytes)
 	if err != nil {
-		panic("Gossiper Read Error: " + err.Error() + "\n")
+		print("Gossiper funcs Read Error: " + err.Error() + "\n")
 	}
 
 	pkt := GossipPacket{}
@@ -27,10 +27,13 @@ func getAndDecodePacket(gossip *Gossiper) (GossipPacket, string) {
 }
 
 func sendPacket(pkt []byte, dst string, gossip *Gossiper) {
-	udpAddr, _ := net.ResolveUDPAddr("udp4", dst)
-	_, err := gossip.conn.WriteToUDP(pkt, udpAddr)
+	udpAddr, err := net.ResolveUDPAddr("udp", dst)
 	if err != nil {
-		println("Gossiper Write to UDP Error: " + err.Error())
+		println("Gossiper Funcs Resolve UDP Address Error: " + err.Error())
+	}
+	_, err = gossip.conn.WriteToUDP(pkt, udpAddr)
+	if err != nil {
+		println("Gossiper Funcs Write to UDP Error: " + err.Error())
 	}
 }
 
