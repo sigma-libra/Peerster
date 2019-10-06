@@ -34,17 +34,22 @@ func main() {
 
 	knownPeers = strings.Split(*peers, ",")
 
+	peerSharingChan := make(chan string, 1000)
 	if *simple {
-		peerSharingChan := make(chan string, 1000)
 		go gossiper.HandleSimpleMessagesFrom(peerGossip, false, name, gossipAddr, knownPeers, peerSharingChan)
 		go gossiper.HandleSimpleMessagesFrom(clientGossip, true, name, gossipAddr, knownPeers, peerSharingChan)
 
-		for {
-			time.Sleep(2 * time.Millisecond)
-		}
-
 	} else {
+		wantsUpdate := make(chan gossiper.PeerStatus, 1000)
+		go gossiper.HandleRumorMessagesFrom(peerGossip, *name, knownPeers, false, peerSharingChan, wantsUpdate)
+		go gossiper.HandleRumorMessagesFrom(clientGossip, *name, knownPeers, true, peerSharingChan, wantsUpdate)
+		go gossiper.FireAntiEntropy(knownPeers, peerSharingChan, wantsUpdate, peerGossip)
 
+
+	}
+
+	for {
+		time.Sleep(2 * time.Millisecond)
 	}
 
 }

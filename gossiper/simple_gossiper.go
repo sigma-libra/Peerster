@@ -42,7 +42,7 @@ func HandleSimpleMessagesFrom(gossip *Gossiper, isClient bool, name *string, gos
 			}
 			newRelayPeerAddr = *gossipAddr
 		}
-		fmt.Println("PEERS\n" + FormatPeers(knownPeers))
+		fmt.Println("PEERS " + FormatPeers(knownPeers))
 
 		newMsg := SimpleMessage{newOriginalName, newRelayPeerAddr, newContents}
 

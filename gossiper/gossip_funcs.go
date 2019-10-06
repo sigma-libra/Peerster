@@ -5,6 +5,7 @@ import (
 	"net"
 )
 
+
 func FormatPeers(peerSlice []string) string {
 	peers := ""
 	for _, peer := range peerSlice {
