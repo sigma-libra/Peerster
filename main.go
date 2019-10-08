@@ -32,7 +32,10 @@ func main() {
 	peerGossip := gossiper.NewGossiper(*gossipAddr, *name)
 	clientGossip := gossiper.NewGossiper(clientAddress+":"+*uiport, *name)
 
-	knownPeers = strings.Split(*peers, ",")
+	knownPeers := make([]string, 0)
+	if *peers != "" {
+		knownPeers = strings.Split(*peers, ",")
+	}
 
 	if *simple {
 		peerSharingChan := make(chan string, 1000)
