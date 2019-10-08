@@ -6,8 +6,8 @@ package main
 import (
 	"flag"
 	"github.com/SabrinaKall/Peerster/gossiper"
+	"net/http"
 	"strings"
-	"time"
 )
 
 var name *string
@@ -51,8 +51,19 @@ func main() {
 
 	}
 
-	for {
-		time.Sleep(2 * time.Millisecond)
-	}
+	setUpWindow()
 
+
+}
+
+func setUpWindow(){
+	http.Handle("/", http.FileServer(http.Dir("./frontend")))
+	//http.HandleFunc("/id", getIdHandler)
+	//http.HandleFunc("/message", getLatestRumorMessagesHandler)
+	for {
+		err := http.ListenAndServe("127.0.0.1:8080", nil)
+		if err == nil {
+			println("Frontend err: " + err.Error())
+		}
+	}
 }

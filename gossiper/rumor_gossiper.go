@@ -8,12 +8,13 @@ import (
 	"time"
 )
 
+var messages string = ""
+
 func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string, isClient bool, peerSharingChan chan string, wantUpdateChan chan PeerStatus) {
 
 	wantMap := InitWantMap(knownPeers)
-	orderedMessages := make(map[string][]RumorMessage)
 	earlyMessages := make(map[string][]RumorMessage)
-
+	orderedMessages := make(map[string][]RumorMessage)
 	rumorTracker := make(map[string]RumorMessage)
 
 	waitingForReply := make(map[string]chan bool)
@@ -38,7 +39,8 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string,
 
 			if isClient {
 				msg.Origin = name
-				fmt.Println("CLIENT MESSAGE " + msg.Text)
+				printMsg := "CLIENT MESSAGE " + msg.Text
+				fmt.Println(printMsg)
 				select {
 				case newPeer := <-peerSharingChan:
 					knownPeers = append(knownPeers, newPeer)
@@ -51,7 +53,9 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string,
 					knownPeers = append(knownPeers, sender)
 					peerSharingChan <- sender
 				}
-				fmt.Println("RUMOR origin " + msg.Origin + " from " + sender + " ID " + string(msg.ID) + " contents " + msg.Text)
+				printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + string(msg.ID) + " contents " + msg.Text
+				fmt.Println(printMsg)
+				messages = msg.Origin + ": " + msg.Text + "\n" + messages
 			}
 
 			fmt.Println("PEERS " + FormatPeers(knownPeers))
@@ -265,6 +269,6 @@ func statusCountDown(ticker *time.Ticker, messageReceived chan bool, msg RumorMe
 	}
 }
 
-func GetLatestRumorMessagesList() {
-	
+func GetLatestRumorMessagesList() string{
+	return messages
 }
