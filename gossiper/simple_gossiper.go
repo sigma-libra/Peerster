@@ -52,7 +52,7 @@ func HandleSimpleMessagesFrom(gossip *Gossiper, isClient bool, name *string, gos
 		}
 
 		for _, dst := range knownPeers {
-			if dst != originalRelay {
+			if dst != originalRelay && dst != "0" && dst != "" {
 				sendPacket(newPacketBytes, dst, gossip)
 			}
 		}
