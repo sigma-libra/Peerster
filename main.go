@@ -8,7 +8,6 @@ import (
 	"github.com/SabrinaKall/Peerster/gossiper"
 	"net/http"
 	"strings"
-	"time"
 )
 
 var name *string
@@ -54,11 +53,7 @@ func main() {
 
 	}
 
-	go setUpWindow()
-
-	for {
-		time.Sleep(2 * time.Millisecond)
-	}
+	setUpWindow()
 
 }
 

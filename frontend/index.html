@@ -4,26 +4,30 @@
 <script src="peerster.js"></script>
 <head>
     <link rel="stylesheet" type="text/css" href="peerster.css">
-    <title>HTML Layouts</title>
+    <title>Peerster</title>
 
 </head>
 <body>
 <main>
+
     <script>getMessages()</script>
     <script>getId()</script>
     <script>getNodes()</script>
     <header>
-        <pre id="PeerIdField">Test 2</pre>
+        <pre id="PeerIdField">Peer ID</pre>
     </header>
-    <article>
-        <pre id="PeersField" class="nodes">Nodes: </pre>
-    </article>
-    <article>
-        <pre id="MessagesField" class="chat">Messages:</pre>
-    </article>
-    <footer>
-        <button type="button" onclick="get_info()">Send</button>
+    <div style="width: 50%; float:left">
+        <pre id="PeersField" class="nodes" style="overflow-y: scroll; height:400px;">Nodes:</pre>
+        <label for="new_node">New Node : </label><input type="text" id="new_node" style="width:50%;">
         <button type="button" onclick="add_node()">Add Node</button>
+    </div>
+
+    <div style="width: 50%; float:right">
+        <pre id="MessagesField" class="chat" style="overflow-y: scroll; height:400px;">Messages:</pre>
+        <label for="new_message">New Message : </label><input type="text" id="new_message" style="width:50%;" >
+        <button type="button" onclick="send_message()">Send</button>
+    </div>
+    <footer>
     </footer>
 
 </main>
