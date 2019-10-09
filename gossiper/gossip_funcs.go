@@ -1,8 +1,10 @@
 package gossiper
 
 import (
+	"encoding/json"
 	"github.com/dedis/protobuf"
 	"net"
+	"net/http"
 )
 
 
@@ -48,4 +50,39 @@ func isRumorPacket(pkt GossipPacket) bool {
 	}
 
 	return pktHasRumorMsg
+}
+
+func GetIdHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		id := "Name: " + PeerName + "(Port: " + PeerUIPort + ")"
+		idJSON, err := json.Marshal(id)
+		if err != nil {
+			println("frontend error: " + err.Error())
+		}
+		// error handling, etc...
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err = w.Write(idJSON)
+		if err != nil {
+			println("Frontend Error - Get id handler: " + err.Error())
+		}
+	}
+}
+
+func GetLatestRumorMessagesHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		messagesJson, err := json.Marshal(messages)
+		if err != nil {
+			println("frontend error: " + err.Error())
+		}
+		// error handling, etc...
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err = w.Write(messagesJson)
+		if err != nil {
+			println("Frontend Error - Get message handler: " + err.Error())
+		}
+	}
 }

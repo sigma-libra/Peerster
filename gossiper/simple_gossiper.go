@@ -7,7 +7,9 @@ import (
 )
 
 
-func HandleSimpleMessagesFrom(gossip *Gossiper, isClient bool, name *string, gossipAddr *string, knownPeers []string, peerSharingChan chan string) {
+func HandleSimpleMessagesFrom(gossip *Gossiper, isClient bool, name *string, gossipAddr *string, knownPeers []string,
+	peerSharingChan chan string, displayMsgChan chan string) {
+
 
 	for {
 
@@ -56,6 +58,8 @@ func HandleSimpleMessagesFrom(gossip *Gossiper, isClient bool, name *string, gos
 				sendPacket(newPacketBytes, dst, gossip)
 			}
 		}
+
+		messages = messages + newOriginalName + ": " + msg.Contents +"\n"
 
 	}
 }

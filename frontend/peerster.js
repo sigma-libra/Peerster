@@ -13,23 +13,16 @@ function add_node() {
 // Use a named immediately-invoked function expression.
 function getMessages() {
     $.getJSON('http://127.0.0.1:8080/message', function(data) {
-        // Now that we've completed the request schedule the next one.
-        $("chat").empty().append("Messages: ");
-        $.each(result, function (i, field) {
-            $("chat").append(field);
-        });
+        var idField = document.getElementById('MessagesField');
+        idField.innerHTML = "Messages: \n" + data;
         setTimeout(getMessages, 5);
     });
 }
 
 function getNodes() {
     $.getJSON('http://127.0.0.1:8080/nodes', function(data) {
-        // Now that we've completed the request schedule the next one
-        $("nodes").empty().append("Nodes: ");
-        $.each(result, function (i, field) {
-            $("nodes").append(field + " ");
-        });
-        $("nodes").append("Printing")
+        var idField = document.getElementById('PeersField');
+        idField.innerHTML = "Peers: \n " + data;
         setTimeout(getNodes, 5000);
     });
 }

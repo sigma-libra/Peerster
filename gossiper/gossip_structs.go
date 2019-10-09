@@ -4,6 +4,11 @@ import (
 	"net"
 )
 
+
+var messages = ""
+var PeerName = ""
+var PeerUIPort = ""
+
 type RumorMessage struct {
 	Origin string
 	ID     uint32
