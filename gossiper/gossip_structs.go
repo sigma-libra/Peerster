@@ -6,6 +6,7 @@ import (
 
 
 var messages = ""
+var nodes = ""
 var PeerName = ""
 var PeerUIPort = ""
 

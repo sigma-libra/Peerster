@@ -9,7 +9,11 @@ import (
 )
 
 func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string, isClient bool,
-	peerSharingChan chan string, wantUpdateChan chan PeerStatus, msgDisplayChan chan string) {
+	peerSharingChan chan string, wantUpdateChan chan PeerStatus) {
+
+	for _, known := range knownPeers {
+		nodes += known + "\n"
+	}
 
 	wantMap := InitWantMap(knownPeers)
 	earlyMessages := make(map[string][]RumorMessage)
@@ -36,7 +40,7 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string,
 		if isRumorPkt {
 			msg := pkt.Rumor
 
-			msgDisplayChan <- msg.Origin + ": " + msg.Text
+			messages += msg.Origin + ": " + msg.Text
 
 			if isClient {
 				msg.Origin = name
@@ -53,6 +57,7 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string,
 				if !helper.StringInSlice(sender, knownPeers) {
 					knownPeers = append(knownPeers, sender)
 					peerSharingChan <- sender
+					nodes += sender + "\n"
 				}
 				printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + string(msg.ID) + " contents " + msg.Text
 				fmt.Println(printMsg)

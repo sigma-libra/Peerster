@@ -6,10 +6,12 @@ import (
 	"github.com/dedis/protobuf"
 )
 
-
 func HandleSimpleMessagesFrom(gossip *Gossiper, isClient bool, name *string, gossipAddr *string, knownPeers []string,
-	peerSharingChan chan string, displayMsgChan chan string) {
+	peerSharingChan chan string) {
 
+	for _, known := range knownPeers {
+		nodes += known + "\n"
+	}
 
 	for {
 
@@ -41,6 +43,7 @@ func HandleSimpleMessagesFrom(gossip *Gossiper, isClient bool, name *string, gos
 			if !helper.StringInSlice(msg.RelayPeerAddr, knownPeers) {
 				knownPeers = append(knownPeers, msg.RelayPeerAddr)
 				peerSharingChan <- msg.RelayPeerAddr
+				nodes += msg.RelayPeerAddr + " \n"
 			}
 			newRelayPeerAddr = *gossipAddr
 		}
@@ -59,7 +62,7 @@ func HandleSimpleMessagesFrom(gossip *Gossiper, isClient bool, name *string, gos
 			}
 		}
 
-		messages = messages + newOriginalName + ": " + msg.Contents +"\n"
+		messages = messages + newOriginalName + ": " + msg.Contents + "\n"
 
 	}
 }

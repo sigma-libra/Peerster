@@ -86,3 +86,20 @@ func GetLatestRumorMessagesHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
+func GetLatestNodesHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		nodesJson, err := json.Marshal(nodes)
+		if err != nil {
+			println("frontend error: " + err.Error())
+		}
+		// error handling, etc...
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err = w.Write(nodesJson)
+		if err != nil {
+			println("Frontend Error - Get nodes handler: " + err.Error())
+		}
+	}
+}

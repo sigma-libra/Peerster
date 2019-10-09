@@ -41,21 +41,20 @@ func main() {
 		knownPeers = strings.Split(*peers, ",")
 	}
 
-	chatBoxMessages := make(chan string, 1000)
 	peerSharingChan := make(chan string, 1000)
 	if *simple {
-		go gossiper.HandleSimpleMessagesFrom(peerGossip, false, name, gossipAddr, knownPeers, peerSharingChan, chatBoxMessages)
-		go gossiper.HandleSimpleMessagesFrom(clientGossip, true, name, gossipAddr, knownPeers, peerSharingChan, chatBoxMessages)
+		go gossiper.HandleSimpleMessagesFrom(peerGossip, false, name, gossipAddr, knownPeers, peerSharingChan)
+		go gossiper.HandleSimpleMessagesFrom(clientGossip, true, name, gossipAddr, knownPeers, peerSharingChan)
 
 	} else {
 		wantsUpdate := make(chan gossiper.PeerStatus, 1000)
-		go gossiper.HandleRumorMessagesFrom(peerGossip, *name, knownPeers, false, peerSharingChan, wantsUpdate, chatBoxMessages)
-		go gossiper.HandleRumorMessagesFrom(clientGossip, *name, knownPeers, true, peerSharingChan, wantsUpdate, chatBoxMessages)
+		go gossiper.HandleRumorMessagesFrom(peerGossip, *name, knownPeers, false, peerSharingChan, wantsUpdate)
+		go gossiper.HandleRumorMessagesFrom(clientGossip, *name, knownPeers, true, peerSharingChan, wantsUpdate)
 		go gossiper.FireAntiEntropy(knownPeers, peerSharingChan, wantsUpdate, peerGossip)
 
 	}
 
-	go setUpWindow(chatBoxMessages)
+	go setUpWindow()
 
 	for {
 		time.Sleep(2 * time.Millisecond)
@@ -63,10 +62,11 @@ func main() {
 
 }
 
-func setUpWindow(chatBoxMessages chan string) {
+func setUpWindow() {
 	http.Handle("/", http.FileServer(http.Dir("./frontend")))
 	http.HandleFunc("/id", gossiper.GetIdHandler)
 	http.HandleFunc("/message", gossiper.GetLatestRumorMessagesHandler)
+	http.HandleFunc("/nodes", gossiper.GetLatestNodesHandler)
 	for {
 
 		err := http.ListenAndServe("127.0.0.1:8080", nil)
