@@ -18,26 +18,26 @@ function getMessages() {
         $.each(result, function (i, field) {
             $("chat").append(field);
         });
-        setTimeout(updateInfo, 5000);
+        setTimeout(getMessages, 5);
     });
 }
 
 function getNodes() {
     $.getJSON('http://127.0.0.1:8080/nodes', function(data) {
-        // Now that we've completed the request schedule the next one.
+        // Now that we've completed the request schedule the next one
         $("nodes").empty().append("Nodes: ");
         $.each(result, function (i, field) {
             $("nodes").append(field + " ");
         });
-        setTimeout(updateInfo, 5000);
+        $("nodes").append("Printing")
+        setTimeout(getNodes, 5000);
     });
 }
 
 function getId() {
     $.getJSON('http://127.0.0.1:8080/id', function(data) {
         // Now that we've completed the request schedule the next one.
-        $.each(result, function (i, field) {
-            $("header").append(field + " ");
-        });
+        var idField = document.getElementById('PeerIdField');
+        idField.innerHTML = "Peer ID: " + data;
     });
 }

@@ -9,10 +9,11 @@
 </head>
 <body>
 <main>
-
-   <header>ID: </header>
-    <article class="nodes">Nodes: </article>
-    <article class="chat">Messages: </article>
+    <script>getMessages()</script>
+    <script>getId()</script>
+    <header> <pre id="PeerIdField">Test 2</pre></header>
+    <article id="PeersField" class="nodes">Nodes:</article>
+    <article id="MessagesField" class="chat">Messages:</article>
     <footer>
         <button type="button" onclick="get_info()">Send</button>
         <button type="button" onclick="add_node()">Add Node</button>

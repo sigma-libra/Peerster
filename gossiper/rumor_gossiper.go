@@ -8,9 +8,8 @@ import (
 	"time"
 )
 
-var messages string = ""
-
-func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string, isClient bool, peerSharingChan chan string, wantUpdateChan chan PeerStatus) {
+func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string, isClient bool,
+	peerSharingChan chan string, wantUpdateChan chan PeerStatus, msgDisplayChan chan string) {
 
 	wantMap := InitWantMap(knownPeers)
 	earlyMessages := make(map[string][]RumorMessage)
@@ -37,6 +36,8 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string,
 		if isRumorPkt {
 			msg := pkt.Rumor
 
+			msgDisplayChan <- msg.Origin + ": " + msg.Text
+
 			if isClient {
 				msg.Origin = name
 				printMsg := "CLIENT MESSAGE " + msg.Text
@@ -55,7 +56,6 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string,
 				}
 				printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + string(msg.ID) + " contents " + msg.Text
 				fmt.Println(printMsg)
-				messages = msg.Origin + ": " + msg.Text + "\n" + messages
 			}
 
 			fmt.Println("PEERS " + FormatPeers(knownPeers))
@@ -267,8 +267,4 @@ func statusCountDown(ticker *time.Ticker, messageReceived chan bool, msg RumorMe
 			return
 		}
 	}
-}
-
-func GetLatestRumorMessagesList() string{
-	return messages
 }
