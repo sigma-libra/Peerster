@@ -32,8 +32,8 @@ func main() {
 	gossiper.PeerName = *name
 	gossiper.PeerUIPort = *uiport
 
-	peerGossip := gossiper.NewGossiper(*gossipAddr, *name)
-	clientGossip := gossiper.NewGossiper(clientAddress+":"+*uiport, *name)
+	peerGossiper := *gossiper.NewGossiper(*gossipAddr, *name)
+	clientGossiper := *gossiper.NewGossiper(clientAddress+":"+*uiport, *name)
 
 	knownPeers := make([]string, 0)
 	if *peers != "" {
@@ -42,14 +42,14 @@ func main() {
 
 	peerSharingChan := make(chan string, 1000)
 	if *simple {
-		go gossiper.HandleSimpleMessagesFrom(peerGossip, false, name, gossipAddr, knownPeers, peerSharingChan)
-		go gossiper.HandleSimpleMessagesFrom(clientGossip, true, name, gossipAddr, knownPeers, peerSharingChan)
+		go gossiper.HandleSimpleMessagesFrom(&peerGossiper, false, name, gossipAddr, knownPeers, peerSharingChan)
+		go gossiper.HandleSimpleMessagesFrom(&clientGossiper, true, name, gossipAddr, knownPeers, peerSharingChan)
 
 	} else {
 		wantsUpdate := make(chan gossiper.PeerStatus, 1000)
-		go gossiper.HandleRumorMessagesFrom(peerGossip, *name, knownPeers, false, peerSharingChan, wantsUpdate)
-		go gossiper.HandleRumorMessagesFrom(clientGossip, *name, knownPeers, true, peerSharingChan, wantsUpdate)
-		go gossiper.FireAntiEntropy(knownPeers, peerSharingChan, wantsUpdate, peerGossip)
+		go gossiper.HandleRumorMessagesFrom(&peerGossiper, *name, knownPeers, false, peerSharingChan, wantsUpdate)
+		go gossiper.HandleRumorMessagesFrom(&clientGossiper, *name, knownPeers, true, peerSharingChan, wantsUpdate)
+		go gossiper.FireAntiEntropy(knownPeers, peerSharingChan, wantsUpdate, &peerGossiper)
 
 	}
 

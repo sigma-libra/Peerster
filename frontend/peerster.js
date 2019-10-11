@@ -3,7 +3,7 @@ function add_node() {
 
     var node = document.getElementById("new_node").value;
 
-    $.post("127.0.0.1:8080/nodes", node, function (data) {
+    $.post("/nodes", node, function (data) {
 
         // Display the returned data in browser
         alert(node + " added")
@@ -15,13 +15,12 @@ function send_message() {
 
     var msg = document.getElementById('new_message').value;
 
-    $.post("127.0.0.1:8080/message", msg, function (data) {
+    $.post("/message", {"newMessage":msg} , function (data) {
 
-        // Display the returned data in browser
-
-        alert(msg + " sent")
 
     });
+
+
 }
 
 // Use a named immediately-invoked function expression.
@@ -29,7 +28,7 @@ function getMessages() {
     $.getJSON('http://127.0.0.1:8080/message', function(data) {
         var idField = document.getElementById('MessagesField');
         idField.innerHTML = "Messages: \n" + data;
-        setTimeout(getMessages, 5);
+        setTimeout(getMessages, 5000);
     });
 }
 

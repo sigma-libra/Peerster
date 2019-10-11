@@ -4,8 +4,8 @@ package main
 
 import (
 	"flag"
-	"github.com/dedis/protobuf"
-	"net"
+	"github.com/SabrinaKall/Peerster/gossiper"
+
 )
 
 type SimpleMessage struct {
@@ -18,8 +18,6 @@ type GossipPacket struct {
 	Simple *SimpleMessage
 }
 
-const clientAddr = "127.0.0.1:10000"
-
 func main() {
 	uiport := flag.String("UIPort",
 		"8080", "port for the UI client (default \"8080\")")
@@ -27,30 +25,9 @@ func main() {
 
 	flag.Parse()
 
-	simplePacket := SimpleMessage{"client", clientAddr, *msg}
-	packetToSend, err := protobuf.Encode(&GossipPacket{&simplePacket})
-	if err != nil {
-		print("Client Encode Error: " + err.Error() + "\n")
-	}
+	gossiper.ClientUIPort = *uiport
 
-	msgTest := GossipPacket{}
-	err = protobuf.Decode(packetToSend, &msgTest)
-	if err != nil {
-		println("Client Protobuf Decode Error: " + err.Error())
-	}
-
-	clientUdpAddr, err := net.ResolveUDPAddr("udp4", clientAddr)
-	gossiperUdpAddr, err := net.ResolveUDPAddr("udp4", "127.0.0.1:"+*uiport)
-	if err != nil {
-		println("Client Resolve Addr Error: " + err.Error())
-	}
-	udpConn, err := net.ListenUDP("udp4", clientUdpAddr)
-	if err != nil {
-		print("Client ListenUDP Error: " + err.Error() + "\n")
-	}
-	_, err = udpConn.WriteToUDP(packetToSend, gossiperUdpAddr)
-	if err != nil {
-		println("Client Write To UDP: " + err.Error())
-	}
+	gossiper.SendClientMessage(msg, uiport)
 
 }
+
