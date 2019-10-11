@@ -42,7 +42,7 @@ func HandleSimpleMessagesFrom(gossip *Gossiper, name *string, gossipAddr *string
 	}
 }
 
-func HandleSimpleClientMessagesFrom(gossip *Gossiper, name *string, gossipAddr *string) {
+func HandleSimpleClientMessagesFrom(gossip *Gossiper, name *string, gossipAddr *string, peerGossip *Gossiper) {
 	for {
 
 		pkt := getAndDecodeFromClient(gossip)
@@ -60,7 +60,7 @@ func HandleSimpleClientMessagesFrom(gossip *Gossiper, name *string, gossipAddr *
 		}
 
 		for _, dst := range KnownPeers {
-			sendPacket(newPacketBytes, dst, gossip)
+			sendPacket(newPacketBytes, dst, peerGossip)
 		}
 
 		messages = messages + gossip.Name + ": " + text + "\n"

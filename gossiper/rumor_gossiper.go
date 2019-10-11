@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func HandleRumorMessagesFrom(gossip *Gossiper, name string, isClient bool, wantUpdateChan chan PeerStatus) {
+func HandleRumorMessagesFrom(gossip *Gossiper, name string, wantUpdateChan chan PeerStatus) {
 
 	wantMap := InitWantMap()
 	earlyMessages := make(map[string][]RumorMessage)
@@ -28,7 +28,6 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, isClient bool, wantU
 		default:
 		}
 
-
 		pkt, sender := getAndDecodePacket(gossip)
 
 		if pkt.Simple != nil {
@@ -42,15 +41,9 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, isClient bool, wantU
 
 			messages += msg.Origin + ": " + msg.Text
 
-			if isClient {
-				msg.Origin = name
-				printMsg := "CLIENT MESSAGE " + msg.Text
-				fmt.Println(printMsg)
-			} else {
-				AddPeer(sender)
-				printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.Text
-				fmt.Println(printMsg)
-			}
+			AddPeer(sender)
+			printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.Text
+			fmt.Println(printMsg)
 
 			fmt.Println("PEERS " + FormatPeers(KnownPeers))
 
@@ -154,6 +147,37 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, isClient bool, wantU
 	}
 }
 
+func HandleClientRumorMessages(gossip *Gossiper, name string) {
+
+	for {
+
+		pkt := getAndDecodeFromClient(gossip)
+		text := pkt.Text
+
+		fmt.Println("CLIENT MESSAGE " + text)
+
+		fmt.Println("PEERS " + FormatPeers(KnownPeers))
+
+		newMsg := RumorMessage{
+			Origin: name,
+			ID:     1,
+			Text:   text,
+		}
+
+		newPacketBytes, err := protobuf.Encode(&GossipPacket{Rumor: &newMsg})
+		if err != nil {
+			panic("Gossiper Encode Error: " + err.Error() + "\n")
+		}
+
+		for _, dst := range KnownPeers {
+			sendPacket(newPacketBytes, dst, gossip)
+		}
+
+		messages = messages + gossip.Name + ": " + text + "\n"
+
+	}
+}
+
 func InitWantMap() map[string]PeerStatus {
 	wantMap := make(map[string]PeerStatus)
 	for _, peer := range KnownPeers {
@@ -250,7 +274,7 @@ func statusCountDown(ticker *time.Ticker, messageReceived chan bool, msg RumorMe
 				msg:  msg,
 			}
 
-			go statusCountDown(ticker, done, msg,gossip, updateWaiting)
+			go statusCountDown(ticker, done, msg, gossip, updateWaiting)
 			return
 
 		case <-messageReceived:

@@ -58,15 +58,8 @@ func sendPacket(pkt []byte, dst string, gossip *Gossiper) {
 }
 
 func isRumorPacket(pkt GossipPacket) bool {
-	pktHasSimpleMsg := (pkt.Simple != nil) && (pkt.Rumor == nil) && (pkt.Status == nil)
-	pktHasRumorMsg := (pkt.Simple == nil) && (pkt.Rumor != nil) && (pkt.Status == nil)
-	pktHasStatusMsg := (pkt.Simple == nil) && (pkt.Rumor == nil) && (pkt.Status != nil)
 
-	if !pktHasSimpleMsg && !pktHasRumorMsg && !pktHasStatusMsg {
-		panic("Packet has no message")
-	}
-
-	return pktHasRumorMsg
+	return pkt.Rumor != nil
 }
 
 func GetIdHandler(w http.ResponseWriter, r *http.Request) {
