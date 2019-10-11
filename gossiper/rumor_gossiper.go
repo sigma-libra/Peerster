@@ -4,16 +4,13 @@ import (
 	"fmt"
 	"github.com/dedis/protobuf"
 	"math/rand"
+	"strconv"
 	"time"
 )
 
 func HandleRumorMessagesFrom(gossip *Gossiper, name string, isClient bool, wantUpdateChan chan PeerStatus) {
 
-	for _, known := range KnownPeers {
-		nodes += known + "\n"
-	}
-
-	wantMap := InitWantMap(KnownPeers)
+	wantMap := InitWantMap()
 	earlyMessages := make(map[string][]RumorMessage)
 	orderedMessages := make(map[string][]RumorMessage)
 	rumorTracker := make(map[string]RumorMessage)
@@ -31,15 +28,11 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, isClient bool, wantU
 		default:
 		}
 
+
 		pkt, sender := getAndDecodePacket(gossip)
 
-		if isClient {
-			pkt.Rumor = &RumorMessage{
-				Origin: pkt.Simple.OriginalName,
-				ID:     1,
-				Text:   pkt.Simple.Contents,
-			}
-			pkt.Simple = nil
+		if pkt.Simple != nil {
+
 		}
 
 		isRumorPkt := isRumorPacket(pkt)
@@ -55,7 +48,7 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, isClient bool, wantU
 				fmt.Println(printMsg)
 			} else {
 				AddPeer(sender)
-				printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + string(msg.ID) + " contents " + msg.Text
+				printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.Text
 				fmt.Println(printMsg)
 			}
 
@@ -161,9 +154,9 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, isClient bool, wantU
 	}
 }
 
-func InitWantMap(knownPeers []string) map[string]PeerStatus {
+func InitWantMap() map[string]PeerStatus {
 	wantMap := make(map[string]PeerStatus)
-	for _, peer := range knownPeers {
+	for _, peer := range KnownPeers {
 		wantMap[peer] = PeerStatus{
 			Identifier: peer,
 			NextID:     1,
@@ -187,10 +180,10 @@ func makeStatusPacket(wantMap map[string]PeerStatus) []byte {
 
 }
 
-func FireAntiEntropy(knownPeers []string, wantUpdateChan chan PeerStatus, gossip *Gossiper) {
-	wantMap := InitWantMap(knownPeers)
+func FireAntiEntropy(wantUpdateChan chan PeerStatus, gossip *Gossiper) {
+	wantMap := InitWantMap()
 	for {
-		ticker := time.NewTicker(10 * time.Second)
+		ticker := time.NewTicker(time.Duration(AntiEntropy) * time.Second)
 		<-ticker.C
 		select {
 		case wantsUpdate := <-wantUpdateChan:
@@ -198,7 +191,7 @@ func FireAntiEntropy(knownPeers []string, wantUpdateChan chan PeerStatus, gossip
 		default:
 		}
 
-		randomPeer := knownPeers[rand.Intn(len(knownPeers))]
+		randomPeer := KnownPeers[rand.Intn(len(KnownPeers))]
 
 		sendPacket(makeStatusPacket(wantMap), randomPeer, gossip)
 

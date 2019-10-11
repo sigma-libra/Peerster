@@ -19,6 +19,7 @@ func FormatPeers(peerSlice []string) string {
 }
 
 func getAndDecodePacket(gossip *Gossiper) (GossipPacket, string) {
+
 	packetBytes := make([]byte, 1024)
 	_, sender, err := gossip.conn.ReadFromUDP(packetBytes)
 	if err != nil {
@@ -29,6 +30,21 @@ func getAndDecodePacket(gossip *Gossiper) (GossipPacket, string) {
 	protobuf.Decode(packetBytes, &pkt)
 	return pkt, sender.String()
 }
+
+func getAndDecodeFromClient(gossip *Gossiper) (Message) {
+
+	packetBytes := make([]byte, 1024)
+	_, _, err := gossip.conn.ReadFromUDP(packetBytes)
+	if err != nil {
+		print("Gossiper funcs Read Error: " + err.Error() + "\n")
+	}
+
+	pkt := Message{}
+	protobuf.Decode(packetBytes, &pkt)
+	return pkt
+}
+
+
 
 func sendPacket(pkt []byte, dst string, gossip *Gossiper) {
 	udpAddr, err := net.ResolveUDPAddr("udp4", dst)

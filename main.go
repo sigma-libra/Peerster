@@ -7,12 +7,13 @@ import (
 	"flag"
 	"github.com/SabrinaKall/Peerster/gossiper"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
 var name *string
 var gossipAddr *string
-var knownPeers []string
+var _ []string
 var uiport *string
 
 const clientAddress = "127.0.0.1"
@@ -26,11 +27,13 @@ func main() {
 	name = flag.String("name", "", "name of the gossiper")
 	peers := flag.String("peers", "", "comma separated list of peers of the form ip:port")
 	simple := flag.Bool("simple", false, "run gossiper in simple broadcast mode")
+	antiEntropy := flag.String("antiEntropy", "10", "timeout in seconds for anti-entropy")
 
 	flag.Parse()
 
 	gossiper.PeerName = *name
 	gossiper.PeerUIPort = *uiport
+	gossiper.AntiEntropy, _ = strconv.Atoi(*antiEntropy)
 
 	peerGossiper := *gossiper.NewGossiper(*gossipAddr, *name)
 	clientGossiper := *gossiper.NewGossiper(clientAddress+":"+*uiport, *name)
@@ -45,14 +48,14 @@ func main() {
 	}
 
 	if *simple {
-		go gossiper.HandleSimpleMessagesFrom(&peerGossiper, false, name, gossipAddr)
-		go gossiper.HandleSimpleMessagesFrom(&clientGossiper, true, name, gossipAddr)
+		go gossiper.HandleSimpleMessagesFrom(&peerGossiper, name, gossipAddr)
+		go gossiper.HandleSimpleClientMessagesFrom(&clientGossiper, name, gossipAddr)
 
 	} else {
 		wantsUpdate := make(chan gossiper.PeerStatus, 1000)
 		go gossiper.HandleRumorMessagesFrom(&peerGossiper, *name,false, wantsUpdate)
 		go gossiper.HandleRumorMessagesFrom(&clientGossiper, *name, true, wantsUpdate)
-		go gossiper.FireAntiEntropy(knownPeers, wantsUpdate, &peerGossiper)
+		go gossiper.FireAntiEntropy(wantsUpdate, &peerGossiper)
 
 	}
 
