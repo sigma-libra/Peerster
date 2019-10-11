@@ -132,14 +132,14 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 						println("Gossiper Encode Error: " + err.Error())
 					}
 					sendPacket(rumorEncoded, sender, gossip)
-					break //only send one
+					//break //only send one
 
 				} else if wantMap[wanted.Identifier].NextID < wanted.NextID {
 					//I have fewer messages
 					upToDate = false
 
 					sendPacket(makeStatusPacket(), sender, gossip)
-					break //only send one
+					//break //only send one
 
 				} else {
 					//coin flip - nothing new between me and original dst
