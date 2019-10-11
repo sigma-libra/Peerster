@@ -11,7 +11,7 @@ var messages = ""
 var nodes = ""
 var PeerName = ""
 var PeerUIPort = ""
-var ClientUIPort = ""
+var PeerSharingChan = make(chan string,  1000)
 
 type RumorMessage struct {
 	Origin string

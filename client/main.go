@@ -25,8 +25,6 @@ func main() {
 
 	flag.Parse()
 
-	gossiper.ClientUIPort = *uiport
-
 	gossiper.SendClientMessage(msg, uiport)
 
 }

@@ -7,14 +7,21 @@ import (
 	"net"
 )
 
-func HandleSimpleMessagesFrom(gossip *Gossiper, isClient bool, name *string, gossipAddr *string, knownPeers []string,
-	peerSharingChan chan string) {
+func HandleSimpleMessagesFrom(gossip *Gossiper, isClient bool, name *string, gossipAddr *string, knownPeers []string) {
 
 	for _, known := range knownPeers {
 		nodes += known + "\n"
 	}
 
 	for {
+
+		select {
+		case newPeer := <-PeerSharingChan:
+			knownPeers = append(knownPeers, newPeer)
+
+		default:
+
+		}
 
 		pkt, _ := getAndDecodePacket(gossip)
 		msg := pkt.Simple
@@ -25,13 +32,6 @@ func HandleSimpleMessagesFrom(gossip *Gossiper, isClient bool, name *string, gos
 		originalRelay := msg.RelayPeerAddr
 
 		if isClient {
-			select {
-			case newPeer := <-peerSharingChan:
-				knownPeers = append(knownPeers, newPeer)
-
-			default:
-
-			}
 			fmt.Println("CLIENT MESSAGE " + msg.Contents)
 			newOriginalName = *name
 			newRelayPeerAddr = *gossipAddr
@@ -43,7 +43,7 @@ func HandleSimpleMessagesFrom(gossip *Gossiper, isClient bool, name *string, gos
 
 			if !helper.StringInSlice(msg.RelayPeerAddr, knownPeers) {
 				knownPeers = append(knownPeers, msg.RelayPeerAddr)
-				peerSharingChan <- msg.RelayPeerAddr
+				PeerSharingChan <- msg.RelayPeerAddr
 				nodes += msg.RelayPeerAddr + " \n"
 			}
 			newRelayPeerAddr = *gossipAddr

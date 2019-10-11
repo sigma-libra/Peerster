@@ -8,8 +8,7 @@ import (
 	"time"
 )
 
-func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string, isClient bool,
-	peerSharingChan chan string, wantUpdateChan chan PeerStatus) {
+func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string, isClient bool, wantUpdateChan chan PeerStatus) {
 
 	for _, known := range knownPeers {
 		nodes += known + "\n"
@@ -29,6 +28,8 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string,
 		case gw := <-updateWaiting:
 			waitingForReply[gw.dst] = gw.done
 			rumorTracker[gw.dst] = gw.msg
+		case newPeer := <-PeerSharingChan:
+			knownPeers = append(knownPeers, newPeer)
 
 		default:
 		}
@@ -55,17 +56,10 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string,
 				msg.Origin = name
 				printMsg := "CLIENT MESSAGE " + msg.Text
 				fmt.Println(printMsg)
-				select {
-				case newPeer := <-peerSharingChan:
-					knownPeers = append(knownPeers, newPeer)
-
-				default:
-
-				}
 			} else {
 				if !helper.StringInSlice(sender, knownPeers) {
 					knownPeers = append(knownPeers, sender)
-					peerSharingChan <- sender
+					PeerSharingChan <- sender
 					nodes += sender + "\n"
 				}
 				printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + string(msg.ID) + " contents " + msg.Text
@@ -200,16 +194,16 @@ func makeStatusPacket(wantMap map[string]PeerStatus) []byte {
 
 }
 
-func FireAntiEntropy(knownPeers []string, peerSharingChan chan string, wantUpdateChan chan PeerStatus, gossip *Gossiper) {
+func FireAntiEntropy(knownPeers []string, wantUpdateChan chan PeerStatus, gossip *Gossiper) {
 	wantMap := InitWantMap(knownPeers)
 	for {
 		ticker := time.NewTicker(10 * time.Second)
 		<-ticker.C
 		select {
-		case newPeer := <-peerSharingChan:
+		case newPeer := <-PeerSharingChan:
 			knownPeers = append(knownPeers, newPeer)
-			case wantsUpdate := <-wantUpdateChan:
-				wantMap[wantsUpdate.Identifier] = wantsUpdate
+		case wantsUpdate := <-wantUpdateChan:
+			wantMap[wantsUpdate.Identifier] = wantsUpdate
 		default:
 		}
 

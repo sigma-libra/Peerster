@@ -3,22 +3,14 @@ function add_node() {
 
     var node = document.getElementById("new_node").value;
 
-    $.post("/nodes", node, function (data) {
-
-        // Display the returned data in browser
-        alert(node + " added")
-
-    });
+    $.post("/nodes", {"newNode":node});
 }
 
 function send_message() {
 
     var msg = document.getElementById('new_message').value;
 
-    $.post("/message", {"newMessage":msg} , function (data) {
-
-
-    });
+    $.post("/message", {"newMessage":msg});
 
 
 }

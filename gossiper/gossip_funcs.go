@@ -2,7 +2,6 @@ package gossiper
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/dedis/protobuf"
 	"net"
 	"net/http"
@@ -86,13 +85,12 @@ func GetLatestRumorMessagesHandler(w http.ResponseWriter, r *http.Request) {
 			println("Frontend Error - Get message handler: " + err.Error())
 		}
 	case "POST":
-		println("Caught post!")
 		// Call ParseForm() to parse the raw query and update r.PostForm and r.Form.
 		if err := r.ParseForm(); err != nil {
-			fmt.Fprintf(w, "ParseForm() err: %v", err)
+			println(w, "ParseForm() err: %v", err)
 			return
 		}
-		fmt.Fprintf(w, "Post from website! r.PostFrom = %v\n", r.PostForm)
+		//fmt.Fprintf(w, "Post from website! r.PostFrom = %v\n", r.PostForm)
 		newMessage := r.FormValue("newMessage")
 		SendClientMessage(&newMessage, &PeerUIPort)
 	default:
@@ -114,5 +112,17 @@ func GetLatestNodesHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			println("Frontend Error - Get nodes handler: " + err.Error())
 		}
+	case "POST":
+		println("Caught post!")
+		// Call ParseForm() to parse the raw query and update r.PostForm and r.Form.
+		if err := r.ParseForm(); err != nil {
+			println(w, "ParseForm() err: %v", err)
+			return
+		}
+		//fmt.Fprintf(w, "Post from website! r.PostFrom = %v\n", r.PostForm)
+		newNode := r.FormValue("newNode")
+		PeerSharingChan <- newNode
+	default:
+		println(w, "Sorry, only GET and POST methods are supported.")
 	}
 }
