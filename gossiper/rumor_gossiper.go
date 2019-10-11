@@ -35,6 +35,15 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string,
 
 		pkt, sender := getAndDecodePacket(gossip)
 
+		if isClient {
+			pkt.Rumor = &RumorMessage{
+				Origin: pkt.Simple.OriginalName,
+				ID:     1,
+				Text:   pkt.Simple.Contents,
+			}
+			pkt.Simple = nil
+		}
+
 		isRumorPkt := isRumorPacket(pkt)
 
 		if isRumorPkt {
