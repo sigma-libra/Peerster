@@ -142,3 +142,23 @@ func AddPeer(peer string) {
 		nodes += peer +"\n"
 	}
 }
+
+func initMessageTrackers(wantedID string) {
+	_, wantsKnownForWanted := wantMap[wantedID]
+	if !wantsKnownForWanted {
+		wantMap[wantedID] = PeerStatus{
+			Identifier: wantedID,
+			NextID:     1,
+		}
+	}
+
+	_, listExists := orderedMessages[wantedID]
+	if !listExists {
+		orderedMessages[wantedID] = make([]RumorMessage, 0)
+	}
+
+	_, listExists = earlyMessages[wantedID]
+	if !listExists {
+		earlyMessages[wantedID] = make([]RumorMessage, 0)
+	}
+}

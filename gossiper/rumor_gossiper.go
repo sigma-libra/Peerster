@@ -35,13 +35,7 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 			printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.Text
 			fmt.Println(printMsg)
 
-			_, wantsKnownForSender := wantMap[msg.Origin]
-			if !wantsKnownForSender {
-				wantMap[msg.Origin] = PeerStatus{
-					Identifier: msg.Origin,
-					NextID:     1,
-				}
-			}
+			initMessageTrackers(msg.Origin)
 
 			receivedBefore := wantMap[msg.Origin].NextID > msg.ID
 
@@ -68,23 +62,10 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 						Identifier: msg.Origin,
 						NextID:     msg.ID + 1,
 					}
-					_, listExists := orderedMessages[msg.Origin]
-					if !listExists {
-						orderedMessages[msg.Origin] = make([]RumorMessage, 0)
-					}
-
-					_, listExists = earlyMessages[msg.Origin]
-					if !listExists {
-						earlyMessages[msg.Origin] = make([]RumorMessage, 0)
-					}
 
 					orderedMessages[msg.Origin] = append(orderedMessages[msg.Origin], *msg)
 					fastForward(msg.Origin)
 				} else {
-					_, listExists := earlyMessages[msg.Origin]
-					if !listExists {
-						earlyMessages[msg.Origin] = make([]RumorMessage, 0)
-					}
 					earlyMessages[msg.Origin] = append(earlyMessages[msg.Origin], *msg)
 				}
 
@@ -95,38 +76,19 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 			msg := pkt.Status
 			waitingForReply[sender] = false
 
-			for _, wanted := range msg.Want {
-				_, wantsKnownForWanted := wantMap[wanted.Identifier]
-				if !wantsKnownForWanted {
-					wantMap[wanted.Identifier] = PeerStatus{
-						Identifier: wanted.Identifier,
-						NextID:     1,
-					}
-				}
-
-				_, listExists := orderedMessages[wanted.Identifier]
-				if !listExists {
-					orderedMessages[wanted.Identifier] = make([]RumorMessage, 0)
-				}
-
-				_, listExists = earlyMessages[wanted.Identifier]
-				if !listExists {
-					earlyMessages[wanted.Identifier] = make([]RumorMessage, 0)
-				}
-			}
-
 			printMsg := "STATUS from " + sender
 
-			for _, wanted := range msg.Want {
-				printMsg += " peer " + wanted.Identifier + " nextID " + strconv.FormatUint(uint64(wanted.NextID), 10)
-			}
-			fmt.Println(printMsg)
 			upToDate := true
 			for _, wanted := range msg.Want {
+				wantedName := wanted.Identifier
+				wantedNextID := wanted.NextID
+				printMsg += " peer " + wantedName + " nextID " + strconv.FormatUint(uint64(wantedNextID), 10)
+				initMessageTrackers(wantedName)
 
-				if wantMap[wanted.Identifier].NextID > wanted.NextID {
+				if wantMap[wantedName].NextID > wantedNextID {
+					upToDate = false
 					//I have more messages
-					msgToSend := orderedMessages[wanted.Identifier][wanted.NextID-1]
+					msgToSend := orderedMessages[wantedName][wantedNextID-1]
 					rumorEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &msgToSend})
 					if err != nil {
 						println("Gossiper Encode Error: " + err.Error())
@@ -134,35 +96,34 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 					sendPacket(rumorEncoded, sender, gossip)
 					break //only send one
 
-				} else if wantMap[wanted.Identifier].NextID < wanted.NextID {
-					//I have fewer messages
+				} else if wantMap[wantedName].NextID < wantedNextID {
 					upToDate = false
-
+					//I have fewer messages
 					sendPacket(makeStatusPacket(), sender, gossip)
 					break //only send one
 
-				} else {
-					//coin flip - nothing new between me and original dst
-					originalMessage, _ := rumorTracker[sender]
-
-					coin := rand.Int() % 2
-					heads := (coin == 1)
-					if heads && len(KnownPeers) > 0 {
-						randomPeer := Keys[rand.Intn(len(Keys))]
-						newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &originalMessage})
-						if err != nil {
-							println("Gossiper Encode Error: " + err.Error())
-						}
-						sendPacket(newEncoded, randomPeer, gossip)
-						fmt.Println("FLIPPED COIN sending rumor to " + randomPeer)
-						break
-					}
-
 				}
 			}
+			fmt.Println(printMsg)
+
 			if upToDate {
 				fmt.Println("IN SYNC WITH " + sender)
+				coin := rand.Int() % 2
+				heads := (coin == 1)
+				if heads && len(Keys) > 0 {
+					randomPeer := Keys[rand.Intn(len(Keys))]
+					originalMessage, _ := rumorTracker[sender]
+					newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &originalMessage})
+					if err != nil {
+						println("Gossiper Encode Error: " + err.Error())
+					}
+					sendPacket(newEncoded, randomPeer, gossip)
+					fmt.Println("FLIPPED COIN sending rumor to " + randomPeer)
+					break
+				}
+
 			}
+
 		}
 
 	}
@@ -199,12 +160,14 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 			println("Gossiper Encode Error: " + err.Error())
 		}
 
-		if len(KnownPeers) > 0 {
+		if len(Keys) > 0 {
 			randomPeer := Keys[rand.Intn(len(Keys))]
 			sendPacket(newEncoded, randomPeer, peerGossiper)
 			rumorTracker[randomPeer] = msg
 
 			fmt.Println("MONGERING with " + randomPeer)
+
+			waitingForReply[randomPeer] = true
 
 			go statusCountDown(msg, randomPeer, peerGossiper)
 		}
