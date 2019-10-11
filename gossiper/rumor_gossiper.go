@@ -2,19 +2,18 @@ package gossiper
 
 import (
 	"fmt"
-	"github.com/SabrinaKall/Peerster/helper"
 	"github.com/dedis/protobuf"
 	"math/rand"
 	"time"
 )
 
-func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string, isClient bool, wantUpdateChan chan PeerStatus) {
+func HandleRumorMessagesFrom(gossip *Gossiper, name string, isClient bool, wantUpdateChan chan PeerStatus) {
 
-	for _, known := range knownPeers {
+	for _, known := range KnownPeers {
 		nodes += known + "\n"
 	}
 
-	wantMap := InitWantMap(knownPeers)
+	wantMap := InitWantMap(KnownPeers)
 	earlyMessages := make(map[string][]RumorMessage)
 	orderedMessages := make(map[string][]RumorMessage)
 	rumorTracker := make(map[string]RumorMessage)
@@ -28,8 +27,6 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string,
 		case gw := <-updateWaiting:
 			waitingForReply[gw.dst] = gw.done
 			rumorTracker[gw.dst] = gw.msg
-		case newPeer := <-PeerSharingChan:
-			knownPeers = append(knownPeers, newPeer)
 
 		default:
 		}
@@ -57,16 +54,12 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string,
 				printMsg := "CLIENT MESSAGE " + msg.Text
 				fmt.Println(printMsg)
 			} else {
-				if !helper.StringInSlice(sender, knownPeers) {
-					knownPeers = append(knownPeers, sender)
-					PeerSharingChan <- sender
-					nodes += sender + "\n"
-				}
+				AddPeer(sender)
 				printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + string(msg.ID) + " contents " + msg.Text
 				fmt.Println(printMsg)
 			}
 
-			fmt.Println("PEERS " + FormatPeers(knownPeers))
+			fmt.Println("PEERS " + FormatPeers(KnownPeers))
 
 			receivedBefore := wantMap[msg.Origin].NextID > msg.ID
 
@@ -76,7 +69,7 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string,
 					println("Gossiper Encode Error: " + err.Error())
 				}
 
-				randomPeer := knownPeers[rand.Intn(len(knownPeers))]
+				randomPeer := KnownPeers[rand.Intn(len(KnownPeers))]
 				sendPacket(newEncoded, randomPeer, gossip)
 				rumorTracker[randomPeer] = *msg
 
@@ -86,7 +79,7 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string,
 				done := make(chan bool)
 				waitingForReply[randomPeer] = done
 
-				go statusCountDown(ticker, done, *msg, knownPeers, gossip, updateWaiting)
+				go statusCountDown(ticker, done, *msg, gossip, updateWaiting)
 
 				if wantMap[msg.Origin].NextID == msg.ID {
 					wantMap[msg.Origin] = PeerStatus{
@@ -149,7 +142,7 @@ func HandleRumorMessagesFrom(gossip *Gossiper, name string, knownPeers []string,
 					coin := rand.Int() % 2
 					heads := coin == 1
 					if heads {
-						randomPeer := knownPeers[rand.Intn(len(knownPeers))]
+						randomPeer := KnownPeers[rand.Intn(len(KnownPeers))]
 						newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &originalMessage})
 						if err != nil {
 							println("Gossiper Encode Error: " + err.Error())
@@ -200,8 +193,6 @@ func FireAntiEntropy(knownPeers []string, wantUpdateChan chan PeerStatus, gossip
 		ticker := time.NewTicker(10 * time.Second)
 		<-ticker.C
 		select {
-		case newPeer := <-PeerSharingChan:
-			knownPeers = append(knownPeers, newPeer)
 		case wantsUpdate := <-wantUpdateChan:
 			wantMap[wantsUpdate.Identifier] = wantsUpdate
 		default:
@@ -244,8 +235,7 @@ func RemoveIndex(s []RumorMessage, index int) []RumorMessage {
 	return append(s[:index], s[index+1:]...)
 }
 
-func statusCountDown(ticker *time.Ticker, messageReceived chan bool, msg RumorMessage,
-	knownPeers []string, gossip *Gossiper, updateWaiting chan GossipWaiter) {
+func statusCountDown(ticker *time.Ticker, messageReceived chan bool, msg RumorMessage, gossip *Gossiper, updateWaiting chan GossipWaiter) {
 
 	encoded, err := protobuf.Encode(&GossipPacket{Rumor: &msg})
 	if err != nil {
@@ -255,7 +245,7 @@ func statusCountDown(ticker *time.Ticker, messageReceived chan bool, msg RumorMe
 	for {
 		select {
 		case <-ticker.C:
-			randomPeer := knownPeers[rand.Intn(len(knownPeers))]
+			randomPeer := KnownPeers[rand.Intn(len(KnownPeers))]
 			sendPacket(encoded, randomPeer, gossip)
 
 			ticker := time.NewTicker(10 * time.Second)
@@ -267,7 +257,7 @@ func statusCountDown(ticker *time.Ticker, messageReceived chan bool, msg RumorMe
 				msg:  msg,
 			}
 
-			go statusCountDown(ticker, done, msg, knownPeers, gossip, updateWaiting)
+			go statusCountDown(ticker, done, msg,gossip, updateWaiting)
 			return
 
 		case <-messageReceived:

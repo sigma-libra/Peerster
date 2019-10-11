@@ -20,7 +20,7 @@ function getMessages() {
     $.getJSON('http://127.0.0.1:8080/message', function(data) {
         var idField = document.getElementById('MessagesField');
         idField.innerHTML = "Messages: \n" + data;
-        setTimeout(getMessages, 5000);
+        setTimeout(getMessages, 2000);
     });
 }
 
@@ -28,7 +28,7 @@ function getNodes() {
     $.getJSON('http://127.0.0.1:8080/nodes', function(data) {
         var idField = document.getElementById('PeersField');
         idField.innerHTML = "Peers: \n" + data;
-        setTimeout(getNodes, 5000);
+        setTimeout(getNodes, 2000);
     });
 }
 

@@ -2,26 +2,12 @@ package gossiper
 
 import (
 	"fmt"
-	"github.com/SabrinaKall/Peerster/helper"
 	"github.com/dedis/protobuf"
 	"net"
 )
 
-func HandleSimpleMessagesFrom(gossip *Gossiper, isClient bool, name *string, gossipAddr *string, knownPeers []string) {
-
-	for _, known := range knownPeers {
-		nodes += known + "\n"
-	}
-
+func HandleSimpleMessagesFrom(gossip *Gossiper, isClient bool, name *string, gossipAddr *string) {
 	for {
-
-		select {
-		case newPeer := <-PeerSharingChan:
-			knownPeers = append(knownPeers, newPeer)
-
-		default:
-
-		}
 
 		pkt, _ := getAndDecodePacket(gossip)
 		msg := pkt.Simple
@@ -41,14 +27,10 @@ func HandleSimpleMessagesFrom(gossip *Gossiper, isClient bool, name *string, gos
 				msg.OriginalName + " from " +
 				msg.RelayPeerAddr + " contents " + msg.Contents)
 
-			if !helper.StringInSlice(msg.RelayPeerAddr, knownPeers) {
-				knownPeers = append(knownPeers, msg.RelayPeerAddr)
-				PeerSharingChan <- msg.RelayPeerAddr
-				nodes += msg.RelayPeerAddr + " \n"
-			}
+			AddPeer(msg.RelayPeerAddr)
 			newRelayPeerAddr = *gossipAddr
 		}
-		fmt.Println("PEERS " + FormatPeers(knownPeers))
+		fmt.Println("PEERS " + FormatPeers(KnownPeers))
 
 		newMsg := SimpleMessage{newOriginalName, newRelayPeerAddr, newContents}
 
@@ -57,7 +39,7 @@ func HandleSimpleMessagesFrom(gossip *Gossiper, isClient bool, name *string, gos
 			panic("Gossiper Encode Error: " + err.Error() + "\n")
 		}
 
-		for _, dst := range knownPeers {
+		for _, dst := range KnownPeers {
 			if dst != originalRelay && dst != "0" && dst != "" {
 				sendPacket(newPacketBytes, dst, gossip)
 			}
