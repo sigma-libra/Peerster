@@ -22,7 +22,7 @@ func HandleSimpleMessagesFrom(gossip *Gossiper, name *string, gossipAddr *string
 
 		AddPeer(msg.RelayPeerAddr)
 		newRelayPeerAddr = *gossipAddr
-		fmt.Println("PEERS " + FormatPeers(KnownPeers))
+		fmt.Println("PEERS " + FormatPeers(Keys))
 
 		newMsg := SimpleMessage{newOriginalName, newRelayPeerAddr, newContents}
 
@@ -31,7 +31,7 @@ func HandleSimpleMessagesFrom(gossip *Gossiper, name *string, gossipAddr *string
 			panic("Gossiper Encode Error: " + err.Error() + "\n")
 		}
 
-		for _, dst := range KnownPeers {
+		for dst, _ := range KnownPeers {
 			if dst != originalRelay  {
 				sendPacket(newPacketBytes, dst, gossip)
 			}
@@ -50,7 +50,7 @@ func HandleSimpleClientMessagesFrom(gossip *Gossiper, name *string, gossipAddr *
 
 		fmt.Println("CLIENT MESSAGE " + text)
 
-		fmt.Println("PEERS " + FormatPeers(KnownPeers))
+		fmt.Println("PEERS " + FormatPeers(Keys))
 
 		newMsg := SimpleMessage{*name, *gossipAddr, text}
 
@@ -59,7 +59,7 @@ func HandleSimpleClientMessagesFrom(gossip *Gossiper, name *string, gossipAddr *
 			panic("Gossiper Encode Error: " + err.Error() + "\n")
 		}
 
-		for _, dst := range KnownPeers {
+		for dst, _ := range KnownPeers {
 			sendPacket(newPacketBytes, dst, peerGossip)
 		}
 

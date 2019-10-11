@@ -2,7 +2,6 @@ package gossiper
 
 import (
 	"encoding/json"
-	"github.com/SabrinaKall/Peerster/helper"
 	"github.com/dedis/protobuf"
 	"net"
 	"net/http"
@@ -137,8 +136,9 @@ func GetLatestNodesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func AddPeer(peer string) {
-	if !helper.StringInSlice(peer, KnownPeers) {
-		KnownPeers = append(KnownPeers, peer)
+	if _, here := KnownPeers[peer]; !here {
+		KnownPeers[peer] = true
+		Keys = append(Keys, peer)
 		nodes += peer +"\n"
 	}
 }

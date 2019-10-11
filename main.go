@@ -52,10 +52,9 @@ func main() {
 		go gossiper.HandleSimpleClientMessagesFrom(&clientGossiper, name, gossipAddr, &peerGossiper)
 
 	} else {
-		wantsUpdate := make(chan gossiper.PeerStatus, 1000)
-		go gossiper.HandleRumorMessagesFrom(&peerGossiper, *name, wantsUpdate)
-		go gossiper.HandleClientRumorMessages(&clientGossiper, *name)
-		go gossiper.FireAntiEntropy(wantsUpdate, &peerGossiper)
+		go gossiper.HandleRumorMessagesFrom(&peerGossiper)
+		go gossiper.HandleClientRumorMessages(&clientGossiper, *name, &peerGossiper)
+		go gossiper.FireAntiEntropy(&peerGossiper)
 
 	}
 

@@ -11,7 +11,8 @@ var messages = ""
 var nodes = ""
 var PeerName = ""
 var PeerUIPort = ""
-var KnownPeers = make([]string, 0)
+var KnownPeers = make(map[string]bool)
+var Keys = make([]string, 0)
 var AntiEntropy = 10
 
 type RumorMessage struct {
