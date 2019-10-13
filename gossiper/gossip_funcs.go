@@ -13,7 +13,9 @@ func FormatPeers(peerSlice []string) string {
 	for _, peer := range peerSlice {
 		peers = peers + peer + ","
 	}
-	peers = peers[:len(peers)-1]
+	if len(peerSlice) > 0 {
+		peers = peers[:len(peers)-1]
+	}
 	return peers
 }
 

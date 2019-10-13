@@ -25,9 +25,7 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 		AddPeer(sender)
 		fmt.Println("PEERS " + FormatPeers(Keys))
 
-		isRumorPkt := isRumorPacket(pkt)
-
-		if isRumorPkt {
+		if pkt.Rumor != nil {
 			msg := pkt.Rumor
 
 			messages += msg.Origin + ": " + msg.Text + "\n"
@@ -35,13 +33,8 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 			printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.Text
 			fmt.Println(printMsg)
 
-			_, wantsKnownForSender := wantMap[msg.Origin]
-			if !wantsKnownForSender {
-				wantMap[msg.Origin] = PeerStatus{
-					Identifier: msg.Origin,
-					NextID:     1,
-				}
-			}
+			initNode(msg.Origin)
+
 
 			receivedBefore := wantMap[msg.Origin].NextID > msg.ID
 
@@ -68,51 +61,23 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 						Identifier: msg.Origin,
 						NextID:     msg.ID + 1,
 					}
-					_, listExists := orderedMessages[msg.Origin]
-					if !listExists {
-						orderedMessages[msg.Origin] = make([]RumorMessage, 0)
-					}
-
-					_, listExists = earlyMessages[msg.Origin]
-					if !listExists {
-						earlyMessages[msg.Origin] = make(map[uint32]RumorMessage)
-					}
 
 					orderedMessages[msg.Origin] = append(orderedMessages[msg.Origin], *msg)
 					fastForward(msg.Origin)
 				} else {
-					_, listExists := earlyMessages[msg.Origin]
-					if !listExists {
-						earlyMessages[msg.Origin] = make(map[uint32]RumorMessage)
-					}
 					earlyMessages[msg.Origin][(*msg).ID] = *msg
 				}
 
 			}
 
-		} else {
+		} else if pkt.Status != nil {
 			// packet is status
 			msg := pkt.Status
+
 			waitingForReply[sender] = false
 
 			for _, wanted := range msg.Want {
-				_, wantsKnownForWanted := wantMap[wanted.Identifier]
-				if !wantsKnownForWanted {
-					wantMap[wanted.Identifier] = PeerStatus{
-						Identifier: wanted.Identifier,
-						NextID:     1,
-					}
-				}
-
-				_, listExists := orderedMessages[wanted.Identifier]
-				if !listExists {
-					orderedMessages[wanted.Identifier] = make([]RumorMessage, 0)
-				}
-
-				_, listExists = earlyMessages[wanted.Identifier]
-				if !listExists {
-					earlyMessages[wanted.Identifier] = make(map[uint32]RumorMessage)
-				}
+				initNode(wanted.Identifier)
 			}
 
 			printMsg := "STATUS from " + sender
@@ -288,4 +253,27 @@ func statusCountDown(msg RumorMessage, dst string, gossip *Gossiper) {
 
 	}
 	return
+}
+
+
+func initNode(name string) {
+
+	_, wantsKnownForSender := wantMap[name]
+	if !wantsKnownForSender {
+		wantMap[name] = PeerStatus{
+			Identifier: name,
+			NextID:     1,
+		}
+	}
+
+	_, listExists := orderedMessages[name]
+	if !listExists {
+		orderedMessages[name] = make([]RumorMessage, 0)
+	}
+
+	_, listExists = earlyMessages[name]
+	if !listExists {
+		earlyMessages[name] = make(map[uint32]RumorMessage)
+	}
+
 }
