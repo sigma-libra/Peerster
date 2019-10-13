@@ -9,7 +9,7 @@ import (
 )
 
 var wantMap = make(map[string]PeerStatus)
-var earlyMessages = make(map[string][]RumorMessage)
+var earlyMessages = make(map[string]map[uint32]RumorMessage)
 var orderedMessages = make(map[string][]RumorMessage)
 
 var rumorTracker = make(map[string]RumorMessage)
@@ -75,7 +75,7 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 
 					_, listExists = earlyMessages[msg.Origin]
 					if !listExists {
-						earlyMessages[msg.Origin] = make([]RumorMessage, 0)
+						earlyMessages[msg.Origin] = make(map[uint32]RumorMessage)
 					}
 
 					orderedMessages[msg.Origin] = append(orderedMessages[msg.Origin], *msg)
@@ -83,9 +83,9 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 				} else {
 					_, listExists := earlyMessages[msg.Origin]
 					if !listExists {
-						earlyMessages[msg.Origin] = make([]RumorMessage, 0)
+						earlyMessages[msg.Origin] = make(map[uint32]RumorMessage)
 					}
-					earlyMessages[msg.Origin] = append(earlyMessages[msg.Origin], *msg)
+					earlyMessages[msg.Origin][(*msg).ID] = *msg
 				}
 
 			}
@@ -111,7 +111,7 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 
 				_, listExists = earlyMessages[wanted.Identifier]
 				if !listExists {
-					earlyMessages[wanted.Identifier] = make([]RumorMessage, 0)
+					earlyMessages[wanted.Identifier] = make(map[uint32]RumorMessage)
 				}
 			}
 
@@ -241,13 +241,13 @@ func FireAntiEntropy(gossip *Gossiper) {
 func fastForward(origin string) {
 	currentNext := wantMap[origin].NextID
 	updated := false
-	indexesDelivered := make([]int, 0)
+	indexesDelivered := make([]uint32, 0)
 	for {
-		for i, savedMsg := range earlyMessages[origin] {
+		for id, savedMsg := range earlyMessages[origin] {
 			if savedMsg.ID == currentNext {
 				currentNext += 1
 				updated = true
-				indexesDelivered = append(indexesDelivered, i)
+				indexesDelivered = append(indexesDelivered, id)
 				orderedMessages[origin] = append(orderedMessages[origin], savedMsg)
 			}
 
@@ -259,17 +259,13 @@ func fastForward(origin string) {
 		}
 	}
 	for _, index := range indexesDelivered {
-		earlyMessages[origin] = RemoveIndex(earlyMessages[origin], index)
+		delete(earlyMessages[origin], index)
 	}
 	wantMap[origin] = PeerStatus{
 		origin,
 		currentNext,
 	}
 
-}
-
-func RemoveIndex(s []RumorMessage, index int) []RumorMessage {
-	return append(s[:index], s[index+1:]...)
 }
 
 func statusCountDown(msg RumorMessage, dst string, gossip *Gossiper) {
