@@ -13,10 +13,7 @@ import (
 
 var name *string
 var gossipAddr *string
-var _ []string
 var uiport *string
-
-const clientAddress = "127.0.0.1"
 
 func main() {
 
@@ -36,7 +33,7 @@ func main() {
 	gossiper.AntiEntropy, _ = strconv.Atoi(*antiEntropy)
 
 	peerGossiper := *gossiper.NewGossiper(*gossipAddr, *name)
-	clientGossiper := *gossiper.NewGossiper(clientAddress+":"+*uiport, *name)
+	clientGossiper := *gossiper.NewGossiper("localhost:"+*uiport, *name)
 
 	knownPeers := make([]string, 0)
 	if *peers != "" {

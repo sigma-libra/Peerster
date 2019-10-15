@@ -4,9 +4,6 @@ import (
 	"net"
 )
 
-const clientAddr = "127.0.0.1:10000"
-
-
 var messages = ""
 var nodes = ""
 var PeerName = ""

@@ -8,16 +8,6 @@ import (
 
 )
 
-type SimpleMessage struct {
-	OriginalName  string
-	RelayPeerAddr string
-	Contents      string
-}
-
-type GossipPacket struct {
-	Simple *SimpleMessage
-}
-
 func main() {
 	uiport := flag.String("UIPort",
 		"8080", "port for the UI client (default \"8080\")")

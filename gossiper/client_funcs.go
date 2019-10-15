@@ -2,7 +2,9 @@ package gossiper
 
 import (
 	"github.com/dedis/protobuf"
+	"math/rand"
 	"net"
+	"strconv"
 )
 
 type Message struct {
@@ -17,8 +19,9 @@ func SendClientMessage(msg *string, uiport *string) {
 		print("Client Encode Error: " + err.Error() + "\n")
 	}
 
-	clientUdpAddr, err := net.ResolveUDPAddr("udp4", clientAddr)
-	gossiperUdpAddr, err := net.ResolveUDPAddr("udp4", "127.0.0.1:"+*uiport)
+	randomPort := "90" + strconv.Itoa(rand.Intn(50) + 10)
+	clientUdpAddr, err := net.ResolveUDPAddr("udp4", "localhost:" + randomPort)
+	gossiperUdpAddr, err := net.ResolveUDPAddr("udp4", "localhost:"+*uiport)
 	if err != nil {
 		println("Client Resolve Addr Error: " + err.Error())
 	}
