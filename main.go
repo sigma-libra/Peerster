@@ -14,6 +14,7 @@ import (
 var name *string
 var gossipAddr *string
 var uiport *string
+var guiport *string
 
 func main() {
 
@@ -25,6 +26,7 @@ func main() {
 	peers := flag.String("peers", "", "comma separated list of peers of the form ip:port")
 	simple := flag.Bool("simple", false, "run gossiper in simple broadcast mode")
 	antiEntropy := flag.String("antiEntropy", "10", "timeout in seconds for anti-entropy")
+	guiport = flag.String("GUIPort", "8080", "Port for the graphical interface")
 
 	flag.Parse()
 
@@ -66,7 +68,7 @@ func setUpWindow() {
 	http.HandleFunc("/nodes", gossiper.GetLatestNodesHandler)
 	for {
 
-		err := http.ListenAndServe("127.0.0.1:8080", nil)
+		err := http.ListenAndServe( "localhost:" + *guiport, nil)
 		if err == nil {
 			println("Frontend err: " + err.Error())
 		}

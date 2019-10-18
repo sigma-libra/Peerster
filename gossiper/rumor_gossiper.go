@@ -33,12 +33,12 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 
 			initNode(msg.Origin)
 
-			receivedBefore := wantMap[msg.Origin].NextID > msg.ID
+			receivedBefore := (wantMap[msg.Origin].NextID > msg.ID) || (msg.Origin == PeerName)
 
 			//message not received before: start mongering
 			if !receivedBefore {
-
-				messages += msg.Origin + ": " + msg.Text + "\n"
+				
+					messages += msg.Origin + ": " + msg.Text + "\n"
 
 				//pick random peer to send to
 				randomPeer := Keys[rand.Intn(len(Keys))]
