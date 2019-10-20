@@ -2,6 +2,7 @@ package gossiper
 
 import (
 	"net"
+	"sync/atomic"
 )
 
 var messages = ""
@@ -10,7 +11,10 @@ var PeerName = ""
 var PeerUIPort = ""
 var KnownPeers = make(map[string]bool)
 var Keys = make([]string, 0)
+
 var AntiEntropy = 10
+
+var rumorID uint32 = 0
 
 type RumorMessage struct {
 	Origin string
@@ -45,12 +49,6 @@ type Gossiper struct {
 	Name    string
 }
 
-type GossipWaiter struct {
-	dst  string
-	done chan bool
-	msg  RumorMessage
-}
-
 func NewGossiper(address, name string) *Gossiper {
 	udpAddr, err := net.ResolveUDPAddr("udp4", address)
 	if err != nil {
@@ -65,4 +63,10 @@ func NewGossiper(address, name string) *Gossiper {
 		address: udpAddr,
 		conn:    udpConn,
 		Name:    name}
+}
+
+func getAndUpdateRumorID() uint32 {
+
+	return atomic.AddUint32(&rumorID, 1)
+
 }

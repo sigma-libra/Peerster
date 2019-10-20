@@ -1,5 +1,10 @@
 package helper
 
+import (
+	"strconv"
+	. "strings"
+)
+
 func StringInSlice(a string, list []string) bool {
 	for _, b := range list {
 		if b == a {
@@ -7,4 +12,13 @@ func StringInSlice(a string, list []string) bool {
 		}
 	}
 	return false
+}
+
+func SeparateIPAndPort(address string) (string, string) {
+	elems := Split(address, ":")
+	if(len(elems) != 2) {
+		println("Helper function Error: expected 2 parts in address, got " + strconv.Itoa(len(elems)) + " instead")
+		return address, ""
+	}
+	return elems[0], elems[1]
 }

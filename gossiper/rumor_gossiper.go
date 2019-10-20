@@ -16,6 +16,8 @@ var orderedMessages = make(map[string][]RumorMessage)
 // map (ip we monger to) -> (origin of mongered message) -> (ids of mongered messages from origin)
 var mongeringMessages = make(map[string]map[string][]uint32)
 
+var routingTable = InitRoutingTable()
+
 func HandleRumorMessagesFrom(gossip *Gossiper) {
 
 	for {
@@ -28,8 +30,18 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 		if pkt.Rumor != nil {
 			msg := pkt.Rumor
 
-			printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.Text
-			fmt.Println(printMsg)
+			//update routing table
+			prevHop, prevExists := routingTable.Table[msg.Origin]
+			routingTable.Table[msg.Origin] = sender
+
+			if prevExists && prevHop != sender && msg.Text != "" {
+				fmt.Println("DSDV " + msg.Origin + " " + sender)
+			}
+
+			if msg.Text != "" {
+				printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.Text
+				fmt.Println(printMsg)
+			}
 
 			initNode(msg.Origin)
 
@@ -37,8 +49,8 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 
 			//message not received before: start mongering
 			if !receivedBefore {
-				
-					messages += msg.Origin + ": " + msg.Text + "\n"
+
+				messages += msg.Origin + ": " + msg.Text + "\n"
 
 				//pick random peer to send to
 				randomPeer := Keys[rand.Intn(len(Keys))]
@@ -188,7 +200,6 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 
 func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Gossiper) {
 
-	localID := 1
 
 	for {
 
@@ -201,11 +212,9 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 
 		msg := RumorMessage{
 			Origin: name,
-			ID:     uint32(localID),
+			ID:     getAndUpdateRumorID(),
 			Text:   text,
 		}
-
-		localID += 1
 
 		messages += msg.Origin + ": " + msg.Text + "\n"
 
@@ -227,20 +236,6 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 
 }
 
-func makeStatusPacket() []byte {
-	wants := make([]PeerStatus, 0)
-	for _, status := range wantMap {
-		wants = append(wants, status)
-	}
-	wantPacket := StatusPacket{Want: wants}
-	newEncoded, err := protobuf.Encode(&GossipPacket{Status: &wantPacket})
-	if err != nil {
-		println("Gossiper Encode Error: " + err.Error())
-	}
-	return newEncoded
-
-}
-
 func FireAntiEntropy(gossip *Gossiper) {
 	for {
 		ticker := time.NewTicker(time.Duration(AntiEntropy) * time.Second)
@@ -251,36 +246,6 @@ func FireAntiEntropy(gossip *Gossiper) {
 		}
 
 	}
-}
-
-func fastForward(origin string) {
-	currentNext := wantMap[origin].NextID
-	updated := false
-	indexesDelivered := make([]uint32, 0)
-	for {
-		for id, savedMsg := range earlyMessages[origin] {
-			if savedMsg.ID == currentNext {
-				currentNext += 1
-				updated = true
-				indexesDelivered = append(indexesDelivered, id)
-				orderedMessages[origin] = append(orderedMessages[origin], savedMsg)
-			}
-
-		}
-		if !updated {
-			break
-		} else {
-			updated = false
-		}
-	}
-	for _, index := range indexesDelivered {
-		delete(earlyMessages[origin], index)
-	}
-	wantMap[origin] = PeerStatus{
-		origin,
-		currentNext,
-	}
-
 }
 
 func statusCountDown(msg RumorMessage, dst string, gossip *Gossiper) {
@@ -316,5 +281,3 @@ func statusCountDown(msg RumorMessage, dst string, gossip *Gossiper) {
 	}
 
 }
-
-
