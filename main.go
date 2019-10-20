@@ -25,14 +25,16 @@ func main() {
 	name = flag.String("name", "", "name of the gossiper")
 	peers := flag.String("peers", "", "comma separated list of peers of the form ip:port")
 	simple := flag.Bool("simple", false, "run gossiper in simple broadcast mode")
-	gossiper.AntiEntropy = *flag.Int("antiEntropy", 10, "Use the given timeout in seconds for anti-entropy. If the flag is absent, the default anti-entropy duration is 10 seconds.")
+	antiEntropy := flag.Int("antiEntropy", 10, "Use the given timeout in seconds for anti-entropy. If the flag is absent, the default anti-entropy duration is 10 seconds.")
 	guiport = flag.String("GUIPort", "8080", "Port for the graphical interface")
-	gossiper.RTimer = *flag.Int("rtimer", 0, "Timeout in seconds to send route rumors. 0 (default) means disable sending route rumors.")
+	rtimer := flag.Int("rtimer", 0, "Timeout in seconds to send route rumors. 0 (default) means disable sending route rumors.")
 
 	flag.Parse()
 
 	gossiper.PeerName = *name
 	gossiper.PeerUIPort = *uiport
+	gossiper.AntiEntropy = *antiEntropy
+	gossiper.RTimer = *rtimer
 
 	peerGossiper := *gossiper.NewGossiper(*gossipAddr, *name)
 	clientGossiper := *gossiper.NewGossiper("localhost:"+*uiport, *name)
@@ -51,11 +53,9 @@ func main() {
 		go gossiper.HandleSimpleClientMessagesFrom(&clientGossiper, name, gossipAddr, &peerGossiper)
 
 	} else {
-		gossiper.SendRouteRumor(&peerGossiper)
 		go gossiper.HandleRumorMessagesFrom(&peerGossiper)
 		go gossiper.HandleClientRumorMessages(&clientGossiper, *name, &peerGossiper)
 		go gossiper.FireAntiEntropy(&peerGossiper)
-		go gossiper.FireRouteRumor(&peerGossiper)
 
 	}
 

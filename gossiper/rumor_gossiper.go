@@ -20,6 +20,9 @@ var routingTable = InitRoutingTable()
 
 func HandleRumorMessagesFrom(gossip *Gossiper) {
 
+	SendRouteRumor(gossip)
+	go FireRouteRumor(gossip)
+
 	for {
 
 		pkt, sender := getAndDecodePacket(gossip)
@@ -30,11 +33,13 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 		if pkt.Rumor != nil {
 			msg := pkt.Rumor
 
+			initNode(msg.Origin)
+
 			//update routing table
-			prevHop, prevExists := routingTable.Table[msg.Origin]
+			prevSender, prevExists := routingTable.Table[msg.Origin]
 			routingTable.Table[msg.Origin] = sender
 
-			if prevExists && prevHop != sender && msg.Text != "" {
+			if (!prevExists || (prevExists && prevSender != sender)) && msg.Text == "" {
 				fmt.Println("DSDV " + msg.Origin + " " + sender)
 			}
 
@@ -42,8 +47,6 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 				printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.Text
 				fmt.Println(printMsg)
 			}
-
-			initNode(msg.Origin)
 
 			receivedBefore := (wantMap[msg.Origin].NextID > msg.ID) || (msg.Origin == PeerName)
 
@@ -199,7 +202,6 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 }
 
 func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Gossiper) {
-
 
 	for {
 
