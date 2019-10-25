@@ -30,6 +30,15 @@
     </div>
     <div style="margin:0 auto;width: 30%;">
         <pre id="MessageableField" class="chat" style="overflow-y: scroll; height:400px;">Private Messageable Nodes:</pre>
+        <input type="file" style="display: none" />
+        <button>Open File Dialog</button>
+
+        <script src="https://code.jquery.com/jquery-2.2.4.js"></script>
+        <script>
+            $("button").on("click", function() {
+                $("input").trigger("click");
+            });
+        </script>
     </div>
     <footer>
     </footer>

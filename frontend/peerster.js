@@ -56,6 +56,10 @@ function openMessageWindow(e) {
         $.post("/private_message", {"newMessage": message, "dest": e});
     }
 }
+
+function uploadFile() {
+        $("fileField").trigger("click");
+}
 /*
         <form>
         <label for="new_message">New Message:</label><input type="text" id="new_message"><br>
