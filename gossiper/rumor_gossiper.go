@@ -196,6 +196,22 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 					}
 				}
 			}
+		} else if pkt.Private != nil {
+			msg := pkt.Private
+			if msg.Destination == gossip.Name {
+				fmt.Println("PRIVATE origin "+msg.Origin+" hop-limit "+strconv.FormatInt(int64(msg.HopLimit), 10) +" contents " + msg.Text)
+			} else {
+				if msg.HopLimit > 0 {
+					msg.HopLimit -= 1
+					newEncoded, err := protobuf.Encode(&GossipPacket{Private: msg})
+					if err != nil {
+						println("Gossiper Encode Error: " + err.Error())
+					}
+					nextHop := routingTable.Table[msg.Destination]
+					sendPacket(newEncoded, nextHop, gossip)
+				}
+			}
+
 		}
 
 	}
@@ -212,27 +228,49 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 
 		fmt.Println("PEERS " + FormatPeers(Keys))
 
-		msg := RumorMessage{
-			Origin: name,
-			ID:     getAndUpdateRumorID(),
-			Text:   text,
-		}
+		if *pkt.Destination != "" {
+			msg := PrivateMessage{
+				Origin:      name,
+				ID:          0,
+				Text:        text,
+				Destination: *pkt.Destination,
+				HopLimit:    HopLimit - 1,
+			}
 
-		messages += msg.Origin + ": " + msg.Text + "\n"
+			messages += msg.Origin + ": " + msg.Text + "\n"
 
-		newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &msg})
-		if err != nil {
-			println("Gossiper Encode Error: " + err.Error())
-		}
+			newEncoded, err := protobuf.Encode(&GossipPacket{Private: &msg})
+			if err != nil {
+				println("Gossiper Encode Error: " + err.Error())
+			}
 
-		if len(KnownPeers) > 0 {
-			randomPeer := Keys[rand.Intn(len(Keys))]
-			sendPacket(newEncoded, randomPeer, peerGossiper)
-			addToMongering(randomPeer, msg.Origin, msg.ID)
+			nextHop := routingTable.Table[msg.Destination]
+			sendPacket(newEncoded, nextHop, peerGossiper)
 
-			fmt.Println("MONGERING with " + randomPeer)
+		} else {
 
-			go statusCountDown(msg, randomPeer, peerGossiper)
+			msg := RumorMessage{
+				Origin: name,
+				ID:     getAndUpdateRumorID(),
+				Text:   text,
+			}
+
+			messages += msg.Origin + ": " + msg.Text + "\n"
+
+			newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &msg})
+			if err != nil {
+				println("Gossiper Encode Error: " + err.Error())
+			}
+
+			if len(KnownPeers) > 0 {
+				randomPeer := Keys[rand.Intn(len(Keys))]
+				sendPacket(newEncoded, randomPeer, peerGossiper)
+				addToMongering(randomPeer, msg.Origin, msg.ID)
+
+				fmt.Println("MONGERING with " + randomPeer)
+
+				go statusCountDown(msg, randomPeer, peerGossiper)
+			}
 		}
 	}
 

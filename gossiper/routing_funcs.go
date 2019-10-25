@@ -38,3 +38,11 @@ func makeRouteRumor() []byte {
 	}
 	return newEncoded
 }
+
+func parseRoutingTable() string {
+	origins := ""
+	for k, _:= range routingTable.Table {
+		origins += "<span onclick='openMessageWindow()'> " + k + "</span>\n"
+	}
+	return origins
+}

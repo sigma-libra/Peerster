@@ -67,6 +67,7 @@ func setUpWindow() {
 	http.Handle("/", http.FileServer(http.Dir("./frontend")))
 	http.HandleFunc("/id", gossiper.GetIdHandler)
 	http.HandleFunc("/message", gossiper.GetLatestRumorMessagesHandler)
+	http.HandleFunc("/private_message", gossiper.GetLatestMessageableNodesHandler)
 	http.HandleFunc("/nodes", gossiper.GetLatestNodesHandler)
 	for {
 
