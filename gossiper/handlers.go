@@ -1,8 +1,13 @@
 package gossiper
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"strings"
 )
 
 func GetIdHandler(w http.ResponseWriter, r *http.Request) {
@@ -107,4 +112,65 @@ func GetLatestMessageableNodesHandler(w http.ResponseWriter, r *http.Request) {
 	default:
 		println(w, "Sorry, only GET and POST methods are supported.")
 	}
+}
+
+func GetFileUploadHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		nodesJson, err := json.Marshal(parseRoutingTable())
+		if err != nil {
+			println("frontend error: " + err.Error())
+		}
+		// error handling, etc...
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err = w.Write(nodesJson)
+		if err != nil {
+			println("Frontend Error - Get nodes handler: " + err.Error())
+		}
+	case "POST":
+		var Buf bytes.Buffer
+		// in your case file would be fileupload
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			println("Write to file err: " + err.Error())
+		}
+		defer file.Close()
+		name := strings.Split(header.Filename, ".")
+		fmt.Printf("File name %s\n", name[0])
+		// Copy the file data to my buffer
+		io.Copy(&Buf, file)
+		// do something with the contents...
+		// I normally have a struct defined and unmarshal into a struct, but this will
+		// work as an example
+		contents := Buf.String()
+		fmt.Println(contents)
+		err = writeToFile(header.Filename, contents)
+		if err != nil {
+			println("Write to file err: " + err.Error())
+		}
+		// I reset the buffer in case I want to use it again
+		// reduces memory allocations in more intense projects
+		Buf.Reset()
+		// do something else
+		// etc write header
+		return
+	default:
+		println(w, "Sorry, only GET and POST methods are supported.")
+	}
+
+}
+
+func writeToFile(filename string, data string) error {
+	file, err := os.Create("./_SharedFiles/" + filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = io.WriteString(file, data)
+	if err != nil {
+		return err
+	}
+	return file.Sync()
 }

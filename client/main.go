@@ -12,6 +12,7 @@ func main() {
 		"8080", "port for the UI client (default \"8080\")")
 	msg := flag.String("msg", "", "message to be sent")
 	dest := flag.String("dest", "", "destination for the private message; ​ can be omitted")
+	//file := flag.String("file", "", "file to be indexed by the gossiper")
 
 	flag.Parse()
 
