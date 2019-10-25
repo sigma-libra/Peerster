@@ -1,14 +1,12 @@
 package gossiper
 
 import (
-	"fmt"
 	"github.com/dedis/protobuf"
 	"math/rand"
 	"time"
 )
 
 func FireRouteRumor(gossip *Gossiper) {
-	fmt.Println(RTimer)
 	if RTimer > 0 {
 		for {
 			ticker := time.NewTicker(time.Duration(RTimer) * time.Second)
@@ -42,7 +40,7 @@ func makeRouteRumor() []byte {
 func parseRoutingTable() string {
 	origins := ""
 	for k, _:= range routingTable.Table {
-		origins += "<span onclick='openMessageWindow()'> " + k + "</span>\n"
+		origins += "<span onclick='openMessageWindow((this.textContent || this.innerText))'>" + k +"</span>\n"
 	}
 	return origins
 }

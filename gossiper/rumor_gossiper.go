@@ -36,11 +36,13 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 			initNode(msg.Origin)
 
 			//update routing table
-			prevSender, prevExists := routingTable.Table[msg.Origin]
-			routingTable.Table[msg.Origin] = sender
+			if msg.Origin != PeerName {
+				prevSender, prevExists := routingTable.Table[msg.Origin]
+				routingTable.Table[msg.Origin] = sender
 
-			if (!prevExists || (prevExists && prevSender != sender)) && msg.Text == "" {
-				fmt.Println("DSDV " + msg.Origin + " " + sender)
+				if (!prevExists || (prevExists && prevSender != sender)) && msg.Text == "" {
+					fmt.Println("DSDV " + msg.Origin + " " + sender)
+				}
 			}
 
 			if msg.Text != "" {
@@ -53,7 +55,9 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 			//message not received before: start mongering
 			if !receivedBefore {
 
-				messages += msg.Origin + ": " + msg.Text + "\n"
+				if msg.Text != "" {
+					messages += msg.Origin + ": " + msg.Text + "\n"
+				}
 
 				//pick random peer to send to
 				randomPeer := Keys[rand.Intn(len(Keys))]
@@ -221,23 +225,25 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 
 	for {
 
-		pkt := getAndDecodeFromClient(gossip)
-		text := pkt.Text
+		clientMessage := getAndDecodeFromClient(gossip)
+		text := clientMessage.Text
 
 		fmt.Println("CLIENT MESSAGE " + text)
 
 		fmt.Println("PEERS " + FormatPeers(Keys))
 
-		if *pkt.Destination != "" {
+		if *clientMessage.Destination != "" {
 			msg := PrivateMessage{
 				Origin:      name,
 				ID:          0,
 				Text:        text,
-				Destination: *pkt.Destination,
+				Destination: *clientMessage.Destination,
 				HopLimit:    HopLimit - 1,
 			}
 
-			messages += msg.Origin + ": " + msg.Text + "\n"
+			if msg.Text != "" {
+				messages += msg.Origin + " (private): " + msg.Text + "\n"
+			}
 
 			newEncoded, err := protobuf.Encode(&GossipPacket{Private: &msg})
 			if err != nil {
@@ -255,7 +261,9 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 				Text:   text,
 			}
 
-			messages += msg.Origin + ": " + msg.Text + "\n"
+			if msg.Text != "" {
+				messages += msg.Origin + ": " + msg.Text + "\n"
+			}
 
 			newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &msg})
 			if err != nil {

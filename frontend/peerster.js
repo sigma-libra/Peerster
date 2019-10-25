@@ -16,7 +16,7 @@ function send_message() {
 
 // Use a named immediately-invoked function expression.
 function getMessages() {
-    $.getJSON('http://127.0.0.1:8080/message', function(data) {
+    $.getJSON('http://localhost:8080/message', function(data) {
         var idField = document.getElementById('MessagesField');
         idField.innerHTML = "Messages: \n" + data;
         setTimeout(getMessages, 2000);
@@ -24,7 +24,7 @@ function getMessages() {
 }
 
 function getNodes() {
-    $.getJSON('http://127.0.0.1:8080/nodes', function(data) {
+    $.getJSON('http://localhost:8080/nodes', function(data) {
         var idField = document.getElementById('PeersField');
         idField.innerHTML = "Peers: \n" + data;
         setTimeout(getNodes, 2000);
@@ -32,7 +32,7 @@ function getNodes() {
 }
 
 function getId() {
-    $.getJSON('http://127.0.0.1:8080/id', function(data) {
+    $.getJSON('http://localhost:8080/id', function(data) {
         // Now that we've completed the request schedule the next one.
         var idField = document.getElementById('PeerIdField');
         idField.innerHTML = "Peer ID: " + data;
@@ -40,19 +40,20 @@ function getId() {
 }
 
 function getmessageableNodes() {
-    $.getJSON('http://127.0.0.1:8080/private_message', function(data) {
+    $.getJSON('http://localhost:8080/private_message', function(data) {
         // Now that we've completed the request schedule the next one.
         var messageable = document.getElementById('MessageableField');
-        idField.innerHTML = "Messageable nodes: " + data;
+        messageable.innerHTML = "Messageable nodes (clickeable): \n" + data;
         setTimeout(getmessageableNodes, 2000);
     });
 }
 
-function openMessageWindow() {
-    var t = $(this).text();
-    var message = prompt("Enter your message for " + t, "");
+function openMessageWindow(e) {
+    //alert($(e.target).text());
+    //var t = $(e.target).text();
+    var message = prompt("Enter your message for " + e, "");
     if (message != null) {
-        $.post("/private_message", {"newMessage": message, "dest": t});
+        $.post("/private_message", {"newMessage": message, "dest": e});
     }
 }
 /*
