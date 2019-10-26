@@ -20,9 +20,9 @@ func main() {
 
 	flag.Parse()
 
-	ex3 := *dest != "" && *msg != ""                    //ex3: uiport, dest, msg
-	ex4 := *file != ""                                  //ex4: uiport, file
-	ex6 := *dest != "" && *file != "" && *request != "" //ex6: uiport,dest,file, request
+	sendPrivateMessage := *dest != "" && *msg != ""             //ex3: uiport, dest, msg
+	indexFileLocally := *file != ""                             //ex4: uiport, file -> index message locally
+	requestFile := *dest != "" && *file != "" && *request != "" //ex6: uiport,dest,file, request
 
 	fileHash := make([]byte, 1024)
 	if *request != "" {
@@ -33,7 +33,9 @@ func main() {
 		}
 	}
 
-	if ex3 || ex4 || ex6 {
+	if indexFileLocally {
+		gossiper.ReadFileIntoChunks(*file)
+	} else if sendPrivateMessage || requestFile {
 		gossiper.SendClientMessage(msg, uiport, dest, &fileHash, file)
 	} else {
 		fmt.Println("ERROR (Bad argument combination)")
