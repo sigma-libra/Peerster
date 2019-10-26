@@ -203,7 +203,7 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 		} else if pkt.Private != nil {
 			msg := pkt.Private
 			if msg.Destination == gossip.Name {
-				fmt.Println("PRIVATE origin "+msg.Origin+" hop-limit "+strconv.FormatInt(int64(msg.HopLimit), 10) +" contents " + msg.Text)
+				fmt.Println("PRIVATE origin " + msg.Origin + " hop-limit " + strconv.FormatInt(int64(msg.HopLimit), 10) + " contents " + msg.Text)
 			} else {
 				if msg.HopLimit > 0 {
 					msg.HopLimit -= 1
@@ -223,12 +223,78 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 
 func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Gossiper) {
 
+	//ex3: uiport, dest, msg
+	//ex4: uiport, file
+	//ex6: uiport,dest,file, request
+
 	for {
 
 		clientMessage := getAndDecodeFromClient(gossip)
 		text := clientMessage.Text
 
-		fmt.Println("CLIENT MESSAGE " + text)
+		if clientMessage.Destination != nil && *clientMessage.Destination != "" && //ex6: uiport,dest,file, request
+			clientMessage.File != nil && *clientMessage.File != "" &&
+			clientMessage.Request != nil {
+
+		} else if text != "" && clientMessage.Destination != nil && *clientMessage.Destination != "" { //case ex3: uiport, dest, msg
+			fmt.Println("CLIENT MESSAGE " + text)
+
+			msg := PrivateMessage{
+				Origin:      name,
+				ID:          0,
+				Text:        text,
+				Destination: *clientMessage.Destination,
+				HopLimit:    HopLimit - 1,
+			}
+
+			messages += msg.Origin + " (private): " + msg.Text + "\n"
+
+			newEncoded, err := protobuf.Encode(&GossipPacket{Private: &msg})
+			if err != nil {
+				println("Gossiper Encode Error: " + err.Error())
+			}
+
+			nextHop := routingTable.Table[msg.Destination]
+			sendPacket(newEncoded, nextHop, peerGossiper)
+
+		} else if clientMessage.File != nil && *clientMessage.File != "" { //ex4: uiport, file
+
+		} else if text != "" && (clientMessage.Destination == nil || *clientMessage.Destination != "") { //HW1 rumor message
+			fmt.Println("CLIENT MESSAGE " + text)
+
+			msg := RumorMessage{
+				Origin: name,
+				ID:     getAndUpdateRumorID(),
+				Text:   text,
+			}
+
+			if msg.Text != "" {
+				messages += msg.Origin + ": " + msg.Text + "\n"
+			}
+
+			newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &msg})
+			if err != nil {
+				println("Gossiper Encode Error: " + err.Error())
+			}
+
+			if len(KnownPeers) > 0 {
+				randomPeer := Keys[rand.Intn(len(Keys))]
+				sendPacket(newEncoded, randomPeer, peerGossiper)
+				addToMongering(randomPeer, msg.Origin, msg.ID)
+
+				fmt.Println("MONGERING with " + randomPeer)
+
+				go statusCountDown(msg, randomPeer, peerGossiper)
+			}
+
+		}
+
+		fmt.Println("PEERS " + FormatPeers(Keys))
+
+		//--------------------------------------------------------------------------------------------------------------
+		if text != "" {
+			fmt.Println("CLIENT MESSAGE " + text)
+		}
 
 		fmt.Println("PEERS " + FormatPeers(Keys))
 

@@ -14,12 +14,13 @@ type Message struct {
 	Request     *[]byte
 }
 
-func SendClientMessage(msg *string, uiport *string, dest *string) {
+func SendClientMessage(msg *string, uiport *string, dest *string, fileHash *[]byte, file *string) {
+
 	packet := Message{
 		Text:        *msg,
 		Destination: dest,
-		File:        nil,
-		Request:     nil,
+		File:        file,
+		Request:     fileHash,
 	}
 	packetToSend, err := protobuf.Encode(&packet)
 	if err != nil {

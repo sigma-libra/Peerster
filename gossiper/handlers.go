@@ -51,7 +51,7 @@ func GetLatestRumorMessagesHandler(w http.ResponseWriter, r *http.Request) {
 		//fmt.Fprintf(w, "Post from website! r.PostFrom = %v\n", r.PostForm)
 		newMessage := r.FormValue("newMessage")
 		dst := ""
-		SendClientMessage(&newMessage, &PeerUIPort, &dst)
+		SendClientMessage(&newMessage, &PeerUIPort, &dst, nil, nil)
 	default:
 		println(w, "Sorry, only GET and POST methods are supported.")
 	}
@@ -108,7 +108,7 @@ func GetLatestMessageableNodesHandler(w http.ResponseWriter, r *http.Request) {
 		//fmt.Fprintf(w, "Post from website! r.PostFrom = %v\n", r.PostForm)
 		newMessage := r.FormValue("newMessage")
 		dst := r.FormValue("dest")
-		SendClientMessage(&newMessage, &PeerUIPort, &dst)
+		SendClientMessage(&newMessage, &PeerUIPort, &dst, nil, nil)
 	default:
 		println(w, "Sorry, only GET and POST methods are supported.")
 	}
@@ -149,12 +149,12 @@ func GetFileUploadHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			println("Write to file err: " + err.Error())
 		}
+		ReadFileIntoChunks(name[0])
 		// I reset the buffer in case I want to use it again
 		// reduces memory allocations in more intense projects
 		Buf.Reset()
 		// do something else
 		// etc write header
-		return
 	default:
 		println(w, "Sorry, only GET and POST methods are supported.")
 	}

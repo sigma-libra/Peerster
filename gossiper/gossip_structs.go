@@ -38,18 +38,20 @@ type SimpleMessage struct {
 }
 
 type PrivateMessage struct {
-	Origin string
-	ID uint32
-	Text string
+	Origin      string
+	ID          uint32
+	Text        string
 	Destination string
-	HopLimit uint32
+	HopLimit    uint32
 }
 
 type GossipPacket struct {
-	Simple *SimpleMessage
-	Rumor  *RumorMessage
-	Status *StatusPacket
-	Private *PrivateMessage
+	Simple      *SimpleMessage
+	Rumor       *RumorMessage
+	Status      *StatusPacket
+	Private     *PrivateMessage
+	DataRequest *DataRequest
+	DataReply   *DataReply
 }
 
 type Gossiper struct {
@@ -57,7 +59,6 @@ type Gossiper struct {
 	conn    *net.UDPConn
 	Name    string
 }
-
 
 func NewGossiper(address, name string) *Gossiper {
 	udpAddr, err := net.ResolveUDPAddr("udp4", address)
