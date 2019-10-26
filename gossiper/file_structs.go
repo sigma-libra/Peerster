@@ -3,14 +3,15 @@ package gossiper
 var Files = make(map[[32]byte]FileInfo)
 var DownloadsInProgress = make(map[[32]byte]DownloadInProgress)
 
-const FILEFOLDER = "/_SharedFiles/"
+const FILE_FOLDER = "/_SharedFiles/"
+const DOWNLOAD_FOLDER = "/_Downloads/"
 const CHUNK_SIZE = 8 * 1024
 
 type FileInfo struct {
 	filename string //File name on the local machine.
 	filesize int    //File size in bytes.
 	metafile []byte //The metafile computed as described above.
-	chunks   [][32]byte
+	chunks   map[[32]byte][]byte
 	metahash [32]byte //The SHA-256 hash of the metafile.
 }
 
@@ -36,4 +37,5 @@ type DownloadInProgress struct {
 	chunkIndexBeingFetched    int
 	hashCurrentlyBeingFetched []byte
 	nbChunks                  int
+	filename                  string
 }

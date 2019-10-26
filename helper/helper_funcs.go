@@ -22,3 +22,15 @@ func SeparateIPAndPort(address string) (string, string) {
 	}
 	return elems[0], elems[1]
 }
+
+func Equal(a, b []byte) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
+}

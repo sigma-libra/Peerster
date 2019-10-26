@@ -8,11 +8,12 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
+	"os"
 )
 
 func ReadFileIntoChunks(filename string) {
 
-	data, err := ioutil.ReadFile(FILEFOLDER + filename)
+	data, err := ioutil.ReadFile(FILE_FOLDER + filename)
 	checkErr(err)
 
 	nbChunks := int(math.Ceil(float64(len(data) / CHUNK_SIZE)))
@@ -21,7 +22,7 @@ func ReadFileIntoChunks(filename string) {
 		filename: filename,
 		filesize: len(data),
 		metafile: make([]byte, 32*nbChunks),
-		chunks:   make([][32]byte, nbChunks),
+		chunks:   make(map[[32]byte][]byte),
 		metahash: [32]byte{},
 	}
 
@@ -40,7 +41,7 @@ func ReadFileIntoChunks(filename string) {
 		for j := 0; j < len(chunkSha); j++ {
 			fileStruct.metafile[i+j] = chunkSha[j]
 		}
-		fileStruct.chunks[i] = chunkSha
+		fileStruct.chunks[chunkSha] = chunk.Data
 		if err == io.EOF {
 			break
 		}
@@ -67,28 +68,32 @@ func getDataFor(hash []byte) []byte {
 	} else {
 		//chunk requested
 		for _, fileInfo := range Files {
-			for chunkIndex, chunk := range fileInfo.chunks {
-				if chunk == metahash {
-					fileData, err := ioutil.ReadFile(FILEFOLDER + fileInfo.filename)
-					checkErr(err)
-					chunker := chunker2.New(bytes.NewReader(fileData), chunker2.Pol(0x3DA3358B4DC173))
-
-					// reuse this buffer
-					buf := make([]byte, 8*1024) //8kB
-
-					for i := 0; i < chunkIndex; i++ {
-						_, _ = chunker.Next(buf)
-					}
-					chunkToSend, err := chunker.Next(buf)
-					checkErr(err)
-					return chunkToSend.Data
-
-				}
+			data, isHere := fileInfo.chunks[metahash]
+			if isHere {
+				return data
 			}
 		}
 
 	}
-	return nil
+	return []byte{}
+
+}
+
+func downloadFile(progress DownloadInProgress) error{
+
+		file, err := os.Create(DOWNLOAD_FOLDER + progress.filename)
+		if err != nil {
+		return err
+	}
+		defer file.Close()
+
+		for _, data := range progress.chunks {
+			_, err = io.WriteString(file, string(data))
+			if err != nil {
+				return err
+			}
+		}
+		return file.Sync()
 
 }
 

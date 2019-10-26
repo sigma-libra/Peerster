@@ -1,7 +1,9 @@
 package gossiper
 
 import (
+	"crypto/sha256"
 	"fmt"
+	"github.com/SabrinaKall/Peerster/helper"
 	"github.com/dedis/protobuf"
 	"math/rand"
 	"strconv"
@@ -95,30 +97,38 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 				metaHash := [32]byte{}
 				copy(metaHash[:], msg.HashValue[:])
 				inProgress := DownloadsInProgress[metaHash]
-				if !inProgress.metafileFetched {
-					inProgress.metafile = msg.Data
-					inProgress.metafileFetched = true
-					inProgress.nbChunks = len(inProgress.metafile)/32
-				}
-
-				if inProgress.chunkIndexBeingFetched < inProgress.nbChunks {
-					nextChunkHash := inProgress.metafile[32 * inProgress.chunkIndexBeingFetched: 32 * (inProgress.chunkIndexBeingFetched + 1)]
-
-					newMsg := DataRequest{
-						Origin:      PeerName,
-						Destination: msg.Origin,
-						HopLimit:    HopLimit - 1,
-						HashValue:   nextChunkHash,
+				shaCheck := sha256.Sum256(msg.Data)
+				if helper.Equal(msg.HashValue, inProgress.hashCurrentlyBeingFetched) && helper.Equal(shaCheck[:], msg.HashValue) {
+					if !inProgress.metafileFetched {
+						inProgress.metafile = msg.Data
+						inProgress.metafileFetched = true
+						inProgress.nbChunks = len(inProgress.metafile) / 32
 					}
 
-					newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &newMsg})
-					if err != nil {
-						println("Gossiper Encode Error: " + err.Error())
+					if inProgress.chunkIndexBeingFetched < inProgress.nbChunks {
+						nextChunkHash := inProgress.metafile[32*inProgress.chunkIndexBeingFetched : 32*(inProgress.chunkIndexBeingFetched+1)]
+
+						newMsg := DataRequest{
+							Origin:      PeerName,
+							Destination: msg.Origin,
+							HopLimit:    HopLimit - 1,
+							HashValue:   nextChunkHash,
+						}
+
+						newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &newMsg})
+						if err != nil {
+							println("Gossiper Encode Error: " + err.Error())
+						}
+						nextHop := routingTable.Table[newMsg.Destination]
+						sendPacket(newEncoded, nextHop, gossip)
+
+						inProgress.chunkIndexBeingFetched += 1
+						inProgress.hashCurrentlyBeingFetched = nextChunkHash
+
+					} else {
+						downloadFile(inProgress)
+						delete(DownloadsInProgress, metaHash)
 					}
-					nextHop := routingTable.Table[newMsg.Destination]
-					sendPacket(newEncoded, nextHop, gossip)
-					
-					inProgress.chunkIndexBeingFetched += 1
 				}
 
 			} else {
@@ -155,11 +165,12 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 		if dest != nil && *dest != "" && file != nil && *file != "" && request != nil { //ex6: uiport, dest,file, request
 
 			download := DownloadInProgress{
-				metafile:                  FileInfo{},
+				filename:                  *file,
+				metafile:                  []byte{},
 				chunks:                    make([][]byte, 0),
 				metafileFetched:           false,
 				chunkIndexBeingFetched:    0,
-				hashCurrentlyBeingFetched: []byte(*file),
+				hashCurrentlyBeingFetched: *request,
 			}
 
 			key := [32]byte{}
