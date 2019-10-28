@@ -3,8 +3,8 @@ package gossiper
 var Files = make(map[[32]byte]FileInfo)
 var DownloadsInProgress = make(map[[32]byte]DownloadInProgress)
 
-const FILE_FOLDER = "/_SharedFiles/"
-const DOWNLOAD_FOLDER = "/_Downloads/"
+const FILE_FOLDER = "./_SharedFiles/"
+const DOWNLOAD_FOLDER = "./_Downloads/"
 const CHUNK_SIZE = 8 * 1024
 
 type FileInfo struct {

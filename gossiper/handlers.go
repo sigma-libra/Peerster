@@ -138,7 +138,7 @@ func GetFileUploadHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			println("Write to file err: " + err.Error())
 		}
-		ReadFileIntoChunks(name[0])
+		ReadFileIntoChunks(header.Filename)
 		// I reset the buffer in case I want to use it again
 		// reduces memory allocations in more intense projects
 		Buf.Reset()

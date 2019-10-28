@@ -59,6 +59,7 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 			}
 
 		} else if pkt.DataRequest != nil {
+			fmt.Println("TEST Datarequest")
 			msg := pkt.DataRequest
 			if msg.Destination == gossip.Name {
 
@@ -75,7 +76,7 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 				if err != nil {
 					println("Gossiper Encode Error: " + err.Error())
 				}
-				nextHop := routingTable.Table[msg.Destination]
+				nextHop := routingTable.Table[reply.Destination]
 				sendPacket(newEncoded, nextHop, gossip)
 
 			} else {
@@ -91,6 +92,7 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 			}
 
 		} else if pkt.DataReply != nil {
+			fmt.Println("TEST DataReply")
 			msg := pkt.DataReply
 			if msg.Destination == gossip.Name {
 				//save chunk/metafile and send for next
@@ -99,6 +101,9 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 				inProgress := DownloadsInProgress[metaHash]
 				fileInfo := Files[metaHash]
 				shaCheck := sha256.Sum256(msg.Data)
+				fmt.Println("TEST equality 2 " + strconv.FormatBool(helper.Equal(shaCheck[:], msg.HashValue)))
+				fmt.Println(shaCheck[:])
+				fmt.Println(msg.HashValue)
 				if helper.Equal(msg.HashValue, inProgress.hashCurrentlyBeingFetched) && helper.Equal(shaCheck[:], msg.HashValue) {
 
 					if !inProgress.metafileFetched {

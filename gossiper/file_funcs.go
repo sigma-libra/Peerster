@@ -9,14 +9,23 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
+	"strconv"
 )
 
 func ReadFileIntoChunks(filename string) {
+
+	fmt.Println("reading file " + filename + " into chunks")
 
 	data, err := ioutil.ReadFile(FILE_FOLDER + filename)
 	checkErr(err)
 
 	nbChunks := int(math.Ceil(float64(len(data) / CHUNK_SIZE)))
+
+	if nbChunks == 0 {
+		nbChunks = 1
+	}
+
+	fmt.Println("Nb chunks: " + strconv.Itoa(nbChunks))
 
 	fileStruct := FileInfo{
 		filename: filename,
@@ -30,8 +39,9 @@ func ReadFileIntoChunks(filename string) {
 	chunker := chunker2.New(bytes.NewReader(data), chunker2.Pol(0x3DA3358B4DC173))
 
 	// reuse this buffer
-	buf := make([]byte, 8*1024) //8kB
+	buf := make([]byte, CHUNK_SIZE) //8kB
 
+	fmt.Println("Reading chunks into buffers")
 	for i := 0; i < nbChunks; i++ {
 		chunk, err := chunker.Next(buf)
 		if err != nil {
@@ -42,10 +52,12 @@ func ReadFileIntoChunks(filename string) {
 			fileStruct.metafile[i+j] = chunkSha[j]
 		}
 		fileStruct.chunks[chunkSha] = chunk.Data
+		fmt.Println("printed chunk " + strconv.Itoa(i))
 		if err == io.EOF {
 			break
 		}
 
+		fmt.Println("Metahash: " + string(fileStruct.metahash[:32]))
 		fmt.Printf("%d %02x\n", chunk.Length, sha256.Sum256(chunk.Data))
 	}
 
