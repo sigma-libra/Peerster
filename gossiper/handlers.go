@@ -2,6 +2,7 @@ package gossiper
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -116,18 +117,6 @@ func GetLatestMessageableNodesHandler(w http.ResponseWriter, r *http.Request) {
 
 func GetFileUploadHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
-	case "GET":
-		nodesJson, err := json.Marshal(parseRoutingTable())
-		if err != nil {
-			println("frontend error: " + err.Error())
-		}
-		// error handling, etc...
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_, err = w.Write(nodesJson)
-		if err != nil {
-			println("Frontend Error - Get nodes handler: " + err.Error())
-		}
 	case "POST":
 		var Buf bytes.Buffer
 		// in your case file would be fileupload
@@ -156,7 +145,35 @@ func GetFileUploadHandler(w http.ResponseWriter, r *http.Request) {
 		// do something else
 		// etc write header
 	default:
-		println(w, "Sorry, only GET and POST methods are supported.")
+		println(w, "Sorry, only POST method is supported.")
+	}
+
+}
+
+func GetFileDownloadHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "POST":
+		if err := r.ParseForm(); err != nil {
+			println(w, "ParseForm() err: %v", err)
+			return
+		}
+		//fmt.Fprintf(w, "Post from website! r.PostFrom = %v\n", r.PostForm)
+		dst := r.FormValue("dst")
+		hash := r.FormValue("hash")
+		name := r.FormValue("name")
+
+		fileHash := make([]byte, 1024)
+		if hash != "" {
+			_, err := hex.Decode(fileHash, []byte(hash))
+			if err != nil {
+				fmt.Println("​ ERROR (Unable to decode hex hash)")
+				os.Exit(1)
+			}
+		}
+
+		SendClientMessage(nil, &PeerUIPort, &dst, &fileHash, &name)
+	default:
+		println(w, "Sorry, only POST method is supported.")
 	}
 
 }

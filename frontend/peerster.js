@@ -60,6 +60,16 @@ function openMessageWindow(e) {
 function uploadFile() {
         $("fileField").trigger("click");
 }
+
+function downloadFile() {
+
+    var dst = document.getElementById('new_file_from').value;
+    var hash =  document.getElementById('new_file_hash').value;
+    var name = document.getElementById("new_file_name").value;
+
+    $.post("/download", {"dst":dst, "hash":hash, "name":name});
+
+}
 /*
         <form>
         <label for="new_message">New Message:</label><input type="text" id="new_message"><br>

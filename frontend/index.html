@@ -29,13 +29,24 @@
         <button type="button" onclick="send_message()">Send</button>
     </div>
     <div style="margin:0 auto;width: 30%;">
-        <pre id="MessageableField" class="chat" style="overflow-y: scroll; height:400px;">Private Messageable Nodes:</pre>
+        <pre id="MessageableField" class="chat"
+             style="overflow-y: scroll; height:400px;">Private Messageable Nodes:</pre>
         <form action="http://localhost:8080/uploadFile" method="post" enctype="multipart/form-data">
-            <input type="file" name="file" />
-            <input type="submit" value="Upload" />
+            <input type="file" name="file"/>
+            <input type="submit" value="Upload"/>
         </form>
     </div>
     <footer>
+        <div><b>File Download</b></div>
+        <div><label for="download_file_from">Download File From: </label><input type="text" id="new_file_from"
+                                                                                style="width:20%;">
+            <label for="download_file_hash">Download File Hash: </label><input type="text" id="new_file_hash"
+                                                                               style="width:20%;">
+            <label for="download_file_name">Download File Name: </label><input type="text" id="new_file_name"
+                                                                               style="width:20%;">
+
+            <button type="button" onclick="downloadFile()">Download</button>
+        </div>
     </footer>
 
 
