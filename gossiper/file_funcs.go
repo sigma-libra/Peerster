@@ -93,6 +93,8 @@ func downloadFile(progress DownloadInProgress) error{
 				return err
 			}
 		}
+
+		fmt.Println("RECONSTRUCTED file " + progress.filename)
 		return file.Sync()
 
 }

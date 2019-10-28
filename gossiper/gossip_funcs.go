@@ -14,11 +14,16 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 
 	//update routing table
 	if msg.Origin != PeerName {
+		lastID, originKnown := routingTable.LastMsgID[msg.Origin]
 		prevSender, prevExists := routingTable.Table[msg.Origin]
-		routingTable.Table[msg.Origin] = sender
 
-		if (!prevExists || (prevExists && prevSender != sender)) && msg.Text == "" {
-			fmt.Println("DSDV " + msg.Origin + " " + sender)
+		if !originKnown || lastID < msg.ID  {
+			routingTable.Table[msg.Origin] = sender
+			routingTable.LastMsgID[msg.Origin] = msg.ID
+
+			if !prevExists || (prevExists&& prevSender != sender) {
+				fmt.Println("DSDV " + msg.Origin + " " + sender)
+			}
 		}
 	}
 
@@ -45,7 +50,7 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 		}
 		sendPacket(newEncoded, randomPeer, gossip)
 
-		fmt.Println("MONGERING with " + randomPeer)
+		//fmt.Println("MONGERING with " + randomPeer)
 		addToMongering(randomPeer, msg.Origin, msg.ID)
 
 		//start countdown to monger to someone else

@@ -45,11 +45,11 @@ func getAndDecodeFromClient(gossip *Gossiper) Message {
 func sendPacket(pkt []byte, dst string, gossip *Gossiper) {
 	udpAddr, err := ResolveUDPAddr("udp4", dst)
 	if err != nil {
-		println("Gossiper Funcs Resolve UDP Address Error: " + err.Error())
+		println("General Funcs Resolve UDP Address Error: " + err.Error())
 	}
 	_, err = gossip.conn.WriteToUDP(pkt, udpAddr)
 	if err != nil {
-		println("Gossiper Funcs Write to UDP Error: " + err.Error())
+		println("General Funcs Write to UDP Error: " + err.Error())
 	}
 
 }
