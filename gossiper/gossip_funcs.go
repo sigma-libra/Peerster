@@ -50,7 +50,7 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 		}
 		sendPacket(newEncoded, randomPeer, gossip)
 
-		//fmt.Println("MONGERING with " + randomPeer)
+		fmt.Println("MONGERING with " + randomPeer)
 		addToMongering(randomPeer, msg.Origin, msg.ID)
 
 		//start countdown to monger to someone else
@@ -174,7 +174,7 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 				}
 				sendPacket(newEncoded, randomPeer, gossip)
 				addToMongering(randomPeer, originalMessage.Origin, originalMessage.ID)
-				//fmt.Println("MONGERING with " + randomPeer)
+				fmt.Println("MONGERING with " + randomPeer)
 				fmt.Println("FLIPPED COIN sending rumor to " + randomPeer)
 				go statusCountDown(originalMessage, randomPeer, gossip)
 			}

@@ -37,8 +37,6 @@ func main() {
 		}
 	}
 
-	//req := []byte(*request)
-
 	if indexFileLocally {
 		gossiper.ReadFileIntoChunks(*file)
 	} else if sendPrivateMessage || sendRumorMessage {

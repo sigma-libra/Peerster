@@ -22,7 +22,7 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 		pkt, sender := getAndDecodePacket(gossip)
 
 		AddPeer(sender)
-		//fmt.Println("PEERS " + FormatPeers(Keys))
+		fmt.Println("PEERS " + FormatPeers(Keys))
 
 		if pkt.Rumor != nil {
 			msg := pkt.Rumor
@@ -274,14 +274,14 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 				sendPacket(newEncoded, randomPeer, peerGossiper)
 				addToMongering(randomPeer, msg.Origin, msg.ID)
 
-				//fmt.Println("MONGERING with " + randomPeer)
+				fmt.Println("MONGERING with " + randomPeer)
 
 				go statusCountDown(msg, randomPeer, peerGossiper)
 			}
 
 		}
 
-		//fmt.Println("PEERS " + FormatPeers(Keys))
+		fmt.Println("PEERS " + FormatPeers(Keys))
 	}
 
 }
@@ -323,7 +323,7 @@ func statusCountDown(msg RumorMessage, dst string, gossip *Gossiper) {
 			sendPacket(encoded, randomPeer, gossip)
 			addToMongering(randomPeer, msg.Origin, msg.ID)
 
-			//fmt.Println("MONGERING with " + randomPeer)
+			fmt.Println("MONGERING with " + randomPeer)
 
 			go statusCountDown(msg, randomPeer, gossip)
 
