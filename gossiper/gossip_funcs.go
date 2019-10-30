@@ -32,12 +32,12 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 		fmt.Println(printMsg)
 	}
 
-	receivedBefore := (gossip.wantMap[msg.Origin].NextID > msg.ID) || (msg.Origin == gossip.Name)
+	receivedBefore := (gossip.wantMap[msg.Origin].NextID > msg.ID) //|| (msg.Origin == gossip.Name)
 
 	//message not received before: start mongering
 	if !receivedBefore {
 
-		if msg.Text != "" {
+		if msg.Text != "" && (msg.Origin != gossip.Name) {
 			messages += msg.Origin + ": " + msg.Text + "\n"
 		}
 
