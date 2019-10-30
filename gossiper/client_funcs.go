@@ -1,6 +1,8 @@
 package gossiper
 
 import (
+	"encoding/hex"
+	"fmt"
 	"github.com/dedis/protobuf"
 	"net"
 )
@@ -13,6 +15,8 @@ type Message struct {
 }
 
 func SendClientMessage(msg *string, uiport *string, dest *string, fileHash *[]byte, file *string) {
+
+	fmt.Println("Hash at client sending: " + hex.EncodeToString(*fileHash))
 
 	packet := Message{
 		Text:        *msg,

@@ -2,9 +2,11 @@ package gossiper
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"github.com/SabrinaKall/Peerster/helper"
 	"github.com/dedis/protobuf"
+	"math"
 	"math/rand"
 	"strconv"
 	"time"
@@ -63,7 +65,10 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 			msg := pkt.DataRequest
 			if msg.Destination == gossip.Name {
 
-				data := getDataFor(msg.HashValue)
+				testPrint("Request for me")
+
+				testPrint("Hash to get: " + hex.EncodeToString(msg.HashValue))
+				data, _ := getDataFor(msg.HashValue)
 
 				reply := DataReply{
 					Origin:      PeerName,
@@ -80,6 +85,8 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 				sendPacket(newEncoded, nextHop, gossip)
 
 			} else {
+
+				testPrint("Request for " + msg.Destination)
 				if msg.HopLimit > 0 {
 					msg.HopLimit -= 1
 					newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: msg})
@@ -92,90 +99,92 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 			}
 
 		} else if pkt.DataReply != nil {
-			fmt.Println("TEST DataReply")
 			msg := pkt.DataReply
 			if msg.Destination == gossip.Name {
 				//save chunk/metafile and send for next
-				metaHash := [32]byte{}
-				copy(metaHash[:], msg.HashValue[:])
-				inProgress := DownloadsInProgress[metaHash]
-				fileInfo := Files[metaHash]
-				shaCheck := sha256.Sum256(msg.Data)
-				fmt.Println("TEST equality 2 " + strconv.FormatBool(helper.Equal(shaCheck[:], msg.HashValue)))
-				fmt.Println(shaCheck[:])
-				fmt.Println(msg.HashValue)
-				if helper.Equal(msg.HashValue, inProgress.hashCurrentlyBeingFetched) && helper.Equal(shaCheck[:], msg.HashValue) {
+				testPrint("Reply for me")
 
-					if !inProgress.metafileFetched {
-						fileInfo.metafile = msg.Data
-						inProgress.metafile = msg.Data
+				fileInfo, meta, here, err := findFileWithHash(msg.HashValue)
+				if err != nil {
+					fmt.Println(err)
+				}
 
-						inProgress.metafileFetched = true
-						inProgress.nbChunks = len(inProgress.metafile) / 32
-					} else {
-						inProgress.chunks[inProgress.chunkIndexBeingFetched] = msg.Data
+				if here && !fileInfo.downloadComplete && len(msg.Data) > 0 {
+					shaCheck := sha256.Sum256(msg.Data)
 
-						key := [32]byte{}
-						for i := 0; i < 32; i++ {
-							key[i] = inProgress.hashCurrentlyBeingFetched[i]
+					if helper.Equal(msg.HashValue, fileInfo.hashCurrentlyBeingFetched) && helper.Equal(shaCheck[:], msg.HashValue) {
+
+						if !fileInfo.metafileFetched && meta {
+							fmt.Println("DOWNLOADING metafile of " + fileInfo.filename + " from " + msg.Origin)
+							fileInfo.metafile = msg.Data
+							fileInfo.metafileFetched = true
+							fileInfo.chunkIndexBeingFetched = 0
+
+							fileInfo.nbChunks = int(math.Ceil(float64(float64(len(msg.Data)) / float64(32))))
+
+						} else {
+							fmt.Println("DOWNLOADING " + fileInfo.filename + " chunk " + strconv.Itoa(fileInfo.chunkIndexBeingFetched+1) + "  from " + msg.Origin)
+							key := hex.EncodeToString(fileInfo.hashCurrentlyBeingFetched)
+							fileInfo.orderedHashes[key] = fileInfo.chunkIndexBeingFetched
+							fileInfo.orderedChunks[fileInfo.chunkIndexBeingFetched] = msg.Data
+
+							fileInfo.filesize += len(msg.Data)
+							fileInfo.chunkIndexBeingFetched += 1
+
 						}
-						fileInfo.chunks[key] = msg.Data
-						fileInfo.filesize += len(msg.Data)
+
+						fmt.Println("Index being fetched: " + strconv.Itoa(fileInfo.chunkIndexBeingFetched))
+						fmt.Println("Nb Chunks: " + strconv.Itoa(fileInfo.nbChunks))
+
+						//TODO figure out order of index incrementation
+						if fileInfo.chunkIndexBeingFetched >= fileInfo.nbChunks {
+							downloadFile(*fileInfo)
+						} else {
+							nextChunkHash := fileInfo.metafile[32*(fileInfo.chunkIndexBeingFetched) : 32*(fileInfo.chunkIndexBeingFetched+1)]
+							testPrint("Next hash: " + hex.EncodeToString(nextChunkHash))
+							fileInfo.hashCurrentlyBeingFetched = nextChunkHash
+							testPrint("Saved next hash: " + hex.EncodeToString(fileInfo.hashCurrentlyBeingFetched))
+
+							newMsg := DataRequest{
+								Origin:      PeerName,
+								Destination: msg.Origin,
+								HopLimit:    HopLimit - 1,
+								HashValue:   nextChunkHash,
+							}
+							testPrint("Hash for new chunk: " + hex.EncodeToString(nextChunkHash))
+
+							newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &newMsg})
+							if err != nil {
+								println("Gossiper Encode Error: " + err.Error())
+							}
+
+							Files[fileInfo.metahash] = *fileInfo
+
+							nextHop := routingTable.Table[newMsg.Destination]
+							sendPacket(newEncoded, nextHop, gossip)
+
+							go downloadCountDown(hex.EncodeToString(msg.HashValue), nextChunkHash, newMsg, gossip)
+						}
 
 					}
 
-					if inProgress.chunkIndexBeingFetched < inProgress.nbChunks {
+				} else {
 
-						fmt.Println("DOWNLOADING " + inProgress.filename + " chunk " +strconv.Itoa(inProgress.chunkIndexBeingFetched + 1)+"  from " + msg.Origin)
-						nextChunkHash := inProgress.metafile[32*inProgress.chunkIndexBeingFetched : 32*(inProgress.chunkIndexBeingFetched+1)]
-
-						newMsg := DataRequest{
-							Origin:      PeerName,
-							Destination: msg.Origin,
-							HopLimit:    HopLimit - 1,
-							HashValue:   nextChunkHash,
-						}
-
-						newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &newMsg})
+					testPrint("Reply for " + msg.Destination)
+					if msg.HopLimit > 0 {
+						msg.HopLimit -= 1
+						newEncoded, err := protobuf.Encode(&GossipPacket{DataReply: msg})
 						if err != nil {
 							println("Gossiper Encode Error: " + err.Error())
 						}
-						nextHop := routingTable.Table[newMsg.Destination]
+						nextHop := routingTable.Table[msg.Destination]
 						sendPacket(newEncoded, nextHop, gossip)
-
-						inProgress.chunkIndexBeingFetched += 1
-						inProgress.hashCurrentlyBeingFetched = nextChunkHash
-
-						DownloadsInProgress[metaHash] = inProgress
-						Files[metaHash] = fileInfo
-
-
-						if inProgress.chunkIndexBeingFetched == inProgress.nbChunks  {
-							downloadFile(inProgress)
-							delete(DownloadsInProgress, metaHash)
-						} else {
-							go downloadCountDown(metaHash, nextChunkHash, newMsg, gossip)
-						}
-
-
 					}
-
 				}
 
-			} else {
-				if msg.HopLimit > 0 {
-					msg.HopLimit -= 1
-					newEncoded, err := protobuf.Encode(&GossipPacket{DataReply: msg})
-					if err != nil {
-						println("Gossiper Encode Error: " + err.Error())
-					}
-					nextHop := routingTable.Table[msg.Destination]
-					sendPacket(newEncoded, nextHop, gossip)
-				}
 			}
 
 		}
-
 	}
 }
 
@@ -195,29 +204,23 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 
 		if dest != nil && *dest != "" && file != nil && *file != "" && request != nil { //ex6: uiport, dest,file, request
 
-			key := [32]byte{}
-			for i := 0; i < 32; i++ {
-				key[i] = (*request)[i]
-			}
+			key := hex.EncodeToString(*request)
 
-			DownloadsInProgress[key] = DownloadInProgress{
+			fmt.Println("Hash at client handler: " + key)
+
+			Files[key] = FileInfo{
 				filename:                  *file,
-				metafile:                  []byte{},
-				chunks:                    make([][]byte, 0),
+				filesize:                  0,
+				metafile:                  nil,
+				orderedHashes:             make(map[string]int),
+				orderedChunks:             make(map[int][]byte),
+				metahash:                  key,
+				downloadComplete:          false,
 				metafileFetched:           false,
 				chunkIndexBeingFetched:    0,
 				hashCurrentlyBeingFetched: *request,
+				nbChunks:                  0,
 			}
-
-			Files[key] = FileInfo{
-				filename: *file,
-				filesize: 0,
-				metafile: []byte{},
-				chunks:   make(map[[32]byte][]byte),
-				metahash: key,
-			}
-
-			fmt.Println("DOWNLOADING metafile of "+ *file +" from " + *dest)
 
 			msg := DataRequest{
 				Origin:      name,
@@ -338,13 +341,13 @@ func statusCountDown(msg RumorMessage, dst string, gossip *Gossiper) {
 
 }
 
-func downloadCountDown(key [32]byte, hash []byte, msg DataRequest, peerGossiper *Gossiper) {
+func downloadCountDown(key string, hash []byte, msg DataRequest, peerGossiper *Gossiper) {
 
 	ticker := time.NewTicker(5 * time.Second)
 	<-ticker.C
 
-	download := DownloadsInProgress[key]
-	if helper.Equal(download.hashCurrentlyBeingFetched, hash) {
+	fileInfo, _, _, _ := findFileWithHash(hash)
+	if helper.Equal(fileInfo.hashCurrentlyBeingFetched, hash) {
 
 		newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &msg})
 		if err != nil {
@@ -356,4 +359,8 @@ func downloadCountDown(key [32]byte, hash []byte, msg DataRequest, peerGossiper 
 		go downloadCountDown(key, hash, msg, peerGossiper)
 	}
 
+}
+
+func testPrint(msg string) {
+	fmt.Println("TEST " + msg)
 }

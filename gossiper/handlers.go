@@ -162,16 +162,15 @@ func GetFileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		hash := r.FormValue("hash")
 		name := r.FormValue("name")
 
-		fileHash := make([]byte, 1024)
 		if hash != "" {
-			_, err := hex.Decode(fileHash, []byte(hash))
+			fileHash, err := hex.DecodeString(hash)
 			if err != nil {
 				fmt.Println("​ ERROR (Unable to decode hex hash)")
 				os.Exit(1)
 			}
+			SendClientMessage(nil, &PeerUIPort, &dst, &fileHash, &name)
 		}
 
-		SendClientMessage(nil, &PeerUIPort, &dst, &fileHash, &name)
 	default:
 		println(w, "Sorry, only POST method is supported.")
 	}

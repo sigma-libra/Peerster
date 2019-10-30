@@ -3,12 +3,14 @@ package gossiper
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"fmt"
+	"github.com/SabrinaKall/Peerster/helper"
 	chunker2 "github.com/restic/chunker"
 	"io"
 	"io/ioutil"
 	"math"
-	"os"
 	"strconv"
 )
 
@@ -27,12 +29,18 @@ func ReadFileIntoChunks(filename string) {
 
 	fmt.Println("Nb chunks: " + strconv.Itoa(nbChunks))
 
-	fileStruct := FileInfo{
-		filename: filename,
-		filesize: len(data),
-		metafile: make([]byte, 32*nbChunks),
-		chunks:   make(map[[32]byte][]byte),
-		metahash: [32]byte{},
+	fileInfo := FileInfo{
+		filename:                  filename,
+		filesize:                  len(data),
+		metafile:                  make([]byte, 32*nbChunks),
+		orderedHashes:             make(map[string]int),
+		orderedChunks:             make(map[int][]byte),
+		metahash:                  "",
+		downloadComplete:          true,
+		metafileFetched:           true,
+		chunkIndexBeingFetched:    nbChunks,
+		hashCurrentlyBeingFetched: nil,
+		nbChunks:                  nbChunks,
 	}
 
 	// create a chunker
@@ -41,7 +49,6 @@ func ReadFileIntoChunks(filename string) {
 	// reuse this buffer
 	buf := make([]byte, CHUNK_SIZE) //8kB
 
-	fmt.Println("Reading chunks into buffers")
 	for i := 0; i < nbChunks; i++ {
 		chunk, err := chunker.Next(buf)
 		if err != nil {
@@ -49,65 +56,82 @@ func ReadFileIntoChunks(filename string) {
 		}
 		chunkSha := sha256.Sum256(chunk.Data)
 		for j := 0; j < len(chunkSha); j++ {
-			fileStruct.metafile[i+j] = chunkSha[j]
+			fileInfo.metafile[i+j] = chunkSha[j]
 		}
-		fileStruct.chunks[chunkSha] = chunk.Data
-		fmt.Println("printed chunk " + strconv.Itoa(i))
+		chunkShaString := hex.EncodeToString(chunkSha[:])
+
+		fileInfo.orderedHashes[chunkShaString] = i
+		fileInfo.orderedChunks[i] = chunk.Data
 		if err == io.EOF {
 			break
 		}
-
-		fmt.Println("Metahash: " + string(fileStruct.metahash[:32]))
-		fmt.Printf("%d %02x\n", chunk.Length, sha256.Sum256(chunk.Data))
 	}
 
-	fileStruct.metahash = sha256.Sum256(fileStruct.metafile)
+	metahash := sha256.Sum256(fileInfo.metafile)
+	fileInfo.metahash = hex.EncodeToString(metahash[:])
 
-	Files[fileStruct.metahash] = fileStruct
+	Files[fileInfo.metahash] = fileInfo
+
+	fmt.Println("Metahash: " + fileInfo.metahash)
 }
 
-func getDataFor(hash []byte) []byte {
-	metahash := [32]byte{}
-	for i := 0; i < 32; i++ {
-		metahash[i] = hash[i]
-	}
+func getDataFor(hash []byte) ([]byte, bool) {
 
-	metafileToSend, isMeta := Files[metahash]
+	key := hex.EncodeToString(hash)
+
+	metafileToSend, isMeta := Files[key]
 
 	if isMeta {
-		return metafileToSend.metafile
+		fmt.Println("TEST found meta")
+		return metafileToSend.metafile, true
 
 	} else {
 		//chunk requested
 		for _, fileInfo := range Files {
-			data, isHere := fileInfo.chunks[metahash]
+			index, isHere := fileInfo.orderedHashes[key]
 			if isHere {
-				return data
+				fmt.Println("TEST found chunk")
+				return fileInfo.orderedChunks[index], true
 			}
 		}
-
 	}
-	return []byte{}
+	fmt.Println("TEST did not find hash")
+	return []byte{}, false
 
 }
 
-func downloadFile(progress DownloadInProgress) error{
+func findFileWithHash(hash []byte) (*FileInfo, bool, bool, error) {
+	hashString := hex.EncodeToString(hash)
 
-		file, err := os.Create(DOWNLOAD_FOLDER + progress.filename)
-		if err != nil {
-		return err
+	metafileToSend, isMeta := Files[hashString]
+
+	if isMeta {
+		return &metafileToSend, true, true, nil
 	}
-		defer file.Close()
 
-		for _, data := range progress.chunks {
-			_, err = io.WriteString(file, string(data))
-			if err != nil {
-				return err
-			}
+	for _, fileInfo := range Files {
+		if helper.Equal(hash, fileInfo.hashCurrentlyBeingFetched) {
+			return &fileInfo, false, true, nil
 		}
+	}
+	return nil, false, false, errors.New("No such hash")
+}
 
-		fmt.Println("RECONSTRUCTED file " + progress.filename)
-		return file.Sync()
+func downloadFile(fileInfo FileInfo) error {
+
+	data := make([]byte, 0)
+
+	for i := 0; i < len(fileInfo.orderedChunks); i++ {
+		chunk := fileInfo.orderedChunks[i]
+		data = append(data, chunk...)
+	}
+
+	err := ioutil.WriteFile(DOWNLOAD_FOLDER+fileInfo.filename, data, 0644)
+	checkErr(err)
+
+	fmt.Println("RECONSTRUCTED file " + fileInfo.filename)
+	fileInfo.downloadComplete = true
+	return nil
 
 }
 

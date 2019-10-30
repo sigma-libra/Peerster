@@ -57,10 +57,6 @@ function openMessageWindow(e) {
     }
 }
 
-function uploadFile() {
-        $("fileField").trigger("click");
-}
-
 function downloadFile() {
 
     var dst = document.getElementById('new_file_from').value;

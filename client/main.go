@@ -25,21 +25,24 @@ func main() {
 	indexFileLocally := *file != "" && *request == ""           //ex4: uiport, file -> index message locally
 	requestFile := *dest != "" && *file != "" && *request != "" //ex6: uiport,dest,file, request
 
-	fileHash := make([]byte, 1024)
 	if *request != "" {
-		_, err := hex.Decode(fileHash, []byte(*request))
+		fileHash, err := hex.DecodeString(*request)
 		if err != nil {
 			fmt.Println("​ ERROR (Unable to decode hex hash)")
 			os.Exit(1)
 		}
+		if requestFile {
+			gossiper.SendClientMessage(msg, uiport, dest, &fileHash, file)
+			return
+		}
 	}
 
-	req := []byte(*request)
+	//req := []byte(*request)
 
 	if indexFileLocally {
 		gossiper.ReadFileIntoChunks(*file)
-	} else if sendPrivateMessage || requestFile || sendRumorMessage {
-		gossiper.SendClientMessage(msg, uiport, dest, &req, file)
+	} else if sendPrivateMessage || sendRumorMessage {
+		gossiper.SendClientMessage(msg, uiport, dest, nil, file)
 	} else {
 		fmt.Println("ERROR (Bad argument combination)")
 		os.Exit(1)
