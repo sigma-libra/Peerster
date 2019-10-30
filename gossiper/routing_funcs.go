@@ -19,13 +19,13 @@ func FireRouteRumor(gossip *Gossiper) {
 func SendRouteRumor(gossip *Gossiper) {
 	if RTimer > 0 && len(Keys) > 0 {
 		randomPeer := Keys[rand.Intn(len(Keys))]
-		sendPacket(makeRouteRumor(), randomPeer, gossip)
+		sendPacket(makeRouteRumor(gossip), randomPeer, gossip)
 	}
 }
 
-func makeRouteRumor() []byte {
+func makeRouteRumor(gossip *Gossiper) []byte {
 	msg := RumorMessage{
-		Origin: PeerName,
+		Origin: gossip.Name,
 		ID:     getAndUpdateRumorID(),
 		Text:   "",
 	}

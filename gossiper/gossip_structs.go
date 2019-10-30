@@ -11,6 +11,8 @@ var PeerName = ""
 var PeerUIPort = ""
 var KnownPeers = make(map[string]bool)
 var Keys = make([]string, 0)
+var routingTable = InitRoutingTable()
+var mongeringMessages = make(map[string]map[string][]uint32) // map (ip we monger to) -> (origin of mongered message) -> (ids of mongered messages from origin)
 
 var AntiEntropy = 10
 
@@ -55,9 +57,12 @@ type GossipPacket struct {
 }
 
 type Gossiper struct {
-	address *net.UDPAddr
-	conn    *net.UDPConn
-	Name    string
+	address           *net.UDPAddr
+	conn              *net.UDPConn
+	Name              string
+	wantMap           map[string]PeerStatus
+	earlyMessages     map[string]map[uint32]RumorMessage
+	orderedMessages   map[string][]RumorMessage
 }
 
 func NewGossiper(address, name string) *Gossiper {
@@ -70,10 +75,15 @@ func NewGossiper(address, name string) *Gossiper {
 	if err != nil {
 		println("Gossiper Error Listen UDP: " + err.Error())
 	}
+
 	return &Gossiper{
-		address: udpAddr,
-		conn:    udpConn,
-		Name:    name}
+		address:           udpAddr,
+		conn:              udpConn,
+		Name:              name,
+		wantMap:           make(map[string]PeerStatus),
+		earlyMessages:     make(map[string]map[uint32]RumorMessage),
+		orderedMessages:   make(map[string][]RumorMessage),
+	}
 }
 
 func getAndUpdateRumorID() uint32 {

@@ -10,10 +10,10 @@ import (
 
 func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 
-	initNode(msg.Origin)
+	initNode(msg.Origin, gossip)
 
 	//update routing table
-	if msg.Origin != PeerName {
+	if msg.Origin != gossip.Name {
 		lastID, originKnown := routingTable.LastMsgID[msg.Origin]
 		prevSender, prevExists := routingTable.Table[msg.Origin]
 
@@ -32,7 +32,7 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 		fmt.Println(printMsg)
 	}
 
-	receivedBefore := (wantMap[msg.Origin].NextID > msg.ID) || (msg.Origin == PeerName)
+	receivedBefore := (gossip.wantMap[msg.Origin].NextID > msg.ID) || (msg.Origin == gossip.Name)
 
 	//message not received before: start mongering
 	if !receivedBefore {
@@ -57,20 +57,20 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 		go statusCountDown(*msg, randomPeer, gossip)
 
 		//if next message we want, save in vector clock
-		if wantMap[msg.Origin].NextID == msg.ID {
-			wantMap[msg.Origin] = PeerStatus{
+		if gossip.wantMap[msg.Origin].NextID == msg.ID {
+			gossip.wantMap[msg.Origin] = PeerStatus{
 				Identifier: msg.Origin,
 				NextID:     msg.ID + 1,
 			}
-			orderedMessages[msg.Origin] = append(orderedMessages[msg.Origin], *msg)
-			fastForward(msg.Origin)
+			gossip.orderedMessages[msg.Origin] = append(gossip.orderedMessages[msg.Origin], *msg)
+			fastForward(msg.Origin, gossip)
 		} else {
 			// too early: save for later
-			earlyMessages[msg.Origin][(*msg).ID] = *msg
+			gossip.earlyMessages[msg.Origin][(*msg).ID] = *msg
 		}
 
 		//ack reception of packet
-		sendPacket(makeStatusPacket(), sender, gossip)
+		sendPacket(makeStatusPacket(gossip), sender, gossip)
 
 	}
 }
@@ -80,7 +80,7 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 
 	//update our info about nodes
 	for _, wanted := range msg.Want {
-		initNode(wanted.Identifier)
+		initNode(wanted.Identifier, gossip)
 		printMsg += " peer " + wanted.Identifier + " nextID " + strconv.FormatUint(uint64(wanted.NextID), 10)
 
 	}
@@ -100,7 +100,7 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 
 	for _, wanted := range msg.Want {
 
-		if wantMap[wanted.Identifier].NextID > wanted.NextID {
+		if gossip.wantMap[wanted.Identifier].NextID > wanted.NextID {
 			//(1) The sender has ​ other new messages that the receiver peer has not yet seen,
 			// and if so repeats the rumormongering process by sending ​ one of those messages ​ to the same receiving peer​ .
 			//I have more messages - find the earliest one
@@ -111,7 +111,7 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 				smallestIDMissing = wanted.NextID
 			}
 
-		} else if wantMap[wanted.Identifier].NextID < wanted.NextID {
+		} else if gossip.wantMap[wanted.Identifier].NextID < wanted.NextID {
 			//(2) The sending peer does not have anything new but sees from the exchanged
 			//status that the ​ receiver peer has new messages. Then the sending peer itself
 			//sends a  StatusPacket containing its status vector, which causes the
@@ -142,7 +142,7 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 	}
 
 	if sendMessage {
-		msgToSend := orderedMessages[smallestOrigin][smallestIDMissing-1]
+		msgToSend := gossip.orderedMessages[smallestOrigin][smallestIDMissing-1]
 		rumorEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &msgToSend})
 		if err != nil {
 			println("Gossiper Encode Error: " + err.Error())
@@ -154,7 +154,7 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 		go statusCountDown(msgToSend, sender, gossip)
 
 	} else if sendStatus {
-		sendPacket(makeStatusPacket(), sender, gossip)
+		sendPacket(makeStatusPacket(gossip), sender, gossip)
 	} else {
 		fmt.Println("IN SYNC WITH " + sender)
 
@@ -166,7 +166,7 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 			coin := rand.Int() % 2
 			heads := coin == 1
 			if heads && len(KnownPeers) > 0 {
-				originalMessage := getMessage(originAcked, idAcked)
+				originalMessage := getMessage(originAcked, idAcked, gossip)
 				randomPeer := Keys[rand.Intn(len(Keys))]
 				newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &originalMessage})
 				if err != nil {
@@ -182,35 +182,35 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 	}
 }
 
-func initNode(name string) {
+func initNode(name string, gossip *Gossiper) {
 
-	_, wantsKnownForSender := wantMap[name]
+	_, wantsKnownForSender := gossip.wantMap[name]
 	if !wantsKnownForSender {
-		wantMap[name] = PeerStatus{
+		gossip.wantMap[name] = PeerStatus{
 			Identifier: name,
 			NextID:     1,
 		}
 	}
 
-	_, listExists := orderedMessages[name]
+	_, listExists := gossip.orderedMessages[name]
 	if !listExists {
-		orderedMessages[name] = make([]RumorMessage, 0)
+		gossip.orderedMessages[name] = make([]RumorMessage, 0)
 	}
 
-	_, listExists = earlyMessages[name]
+	_, listExists = gossip.earlyMessages[name]
 	if !listExists {
-		earlyMessages[name] = make(map[uint32]RumorMessage)
+		gossip.earlyMessages[name] = make(map[uint32]RumorMessage)
 	}
 
 }
 
-func getMessage(origin string, id uint32) RumorMessage {
-	isInOrdered := (wantMap[origin].NextID > id)
+func getMessage(origin string, id uint32, gossip *Gossiper) RumorMessage {
+	isInOrdered := (gossip.wantMap[origin].NextID > id)
 	if isInOrdered {
-		return orderedMessages[origin][id-1]
+		return gossip.orderedMessages[origin][id-1]
 	}
 
-	return earlyMessages[origin][id]
+	return gossip.earlyMessages[origin][id]
 
 }
 
@@ -222,9 +222,9 @@ func addToMongering(dst string, origin string, ID uint32) {
 	mongeringMessages[dst][origin] = append(mongeringMessages[dst][origin], ID)
 }
 
-func makeStatusPacket() []byte {
+func makeStatusPacket(gossip *Gossiper) []byte {
 	wants := make([]PeerStatus, 0)
-	for _, status := range wantMap {
+	for _, status := range gossip.wantMap {
 		wants = append(wants, status)
 	}
 	wantPacket := StatusPacket{Want: wants}
@@ -236,17 +236,17 @@ func makeStatusPacket() []byte {
 
 }
 
-func fastForward(origin string) {
-	currentNext := wantMap[origin].NextID
+func fastForward(origin string, gossip *Gossiper) {
+	currentNext := gossip.wantMap[origin].NextID
 	updated := false
 	indexesDelivered := make([]uint32, 0)
 	for {
-		for id, savedMsg := range earlyMessages[origin] {
+		for id, savedMsg := range gossip.earlyMessages[origin] {
 			if savedMsg.ID == currentNext {
 				currentNext += 1
 				updated = true
 				indexesDelivered = append(indexesDelivered, id)
-				orderedMessages[origin] = append(orderedMessages[origin], savedMsg)
+				gossip.orderedMessages[origin] = append(gossip.orderedMessages[origin], savedMsg)
 			}
 
 		}
@@ -257,9 +257,9 @@ func fastForward(origin string) {
 		}
 	}
 	for _, index := range indexesDelivered {
-		delete(earlyMessages[origin], index)
+		delete(gossip.earlyMessages[origin], index)
 	}
-	wantMap[origin] = PeerStatus{
+	gossip.wantMap[origin] = PeerStatus{
 		origin,
 		currentNext,
 	}

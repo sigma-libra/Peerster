@@ -12,15 +12,6 @@ import (
 	"time"
 )
 
-var wantMap = make(map[string]PeerStatus)
-var earlyMessages = make(map[string]map[uint32]RumorMessage)
-var orderedMessages = make(map[string][]RumorMessage)
-
-// map (ip we monger to) -> (origin of mongered message) -> (ids of mongered messages from origin)
-var mongeringMessages = make(map[string]map[string][]uint32)
-
-var routingTable = InitRoutingTable()
-
 func HandleRumorMessagesFrom(gossip *Gossiper) {
 
 	SendRouteRumor(gossip)
@@ -46,7 +37,7 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 
 		} else if pkt.Private != nil {
 			msg := pkt.Private
-			if msg.Destination == PeerName {
+			if msg.Destination == gossip.Name {
 				fmt.Println("PRIVATE origin " + msg.Origin + " hop-limit " + strconv.FormatInt(int64(msg.HopLimit), 10) + " contents " + msg.Text)
 			} else {
 				if msg.HopLimit > 0 {
@@ -71,7 +62,7 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 				data, _ := getDataFor(msg.HashValue)
 
 				reply := DataReply{
-					Origin:      PeerName,
+					Origin:      gossip.Name,
 					Destination: msg.Origin,
 					HopLimit:    HopLimit - 1,
 					HashValue:   msg.HashValue,
@@ -146,7 +137,7 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 							testPrint("Saved next hash: " + hex.EncodeToString(fileInfo.hashCurrentlyBeingFetched))
 
 							newMsg := DataRequest{
-								Origin:      PeerName,
+								Origin:      gossip.Name,
 								Destination: msg.Origin,
 								HopLimit:    HopLimit - 1,
 								HashValue:   nextChunkHash,
@@ -301,7 +292,7 @@ func FireAntiEntropy(gossip *Gossiper) {
 		<-ticker.C
 		if len(Keys) > 0 {
 			randomPeer := Keys[rand.Intn(len(Keys))]
-			sendPacket(makeStatusPacket(), randomPeer, gossip)
+			sendPacket(makeStatusPacket(gossip), randomPeer, gossip)
 		}
 
 	}
