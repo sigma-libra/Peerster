@@ -49,8 +49,8 @@ func main() {
 	}
 
 	if *simple {
-		go gossiper.HandleSimpleMessagesFrom(&peerGossiper, name, gossipAddr)
-		go gossiper.HandleSimpleClientMessagesFrom(&clientGossiper, name, gossipAddr, &peerGossiper)
+		go gossiper.HandleSimpleMessagesFrom(&peerGossiper, gossipAddr)
+		go gossiper.HandleSimpleClientMessagesFrom(&clientGossiper, gossipAddr, &peerGossiper)
 
 	} else {
 		go gossiper.HandleRumorMessagesFrom(&peerGossiper)

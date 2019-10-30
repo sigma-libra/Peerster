@@ -1,8 +1,10 @@
 package gossiper
 
 import (
+	"fmt"
 	"github.com/dedis/protobuf"
 	"math/rand"
+	"strconv"
 	"time"
 )
 
@@ -39,8 +41,25 @@ func makeRouteRumor(gossip *Gossiper) []byte {
 
 func parseRoutingTable() string {
 	origins := ""
-	for k, _:= range routingTable.Table {
-		origins += "<span onclick='openMessageWindow((this.textContent || this.innerText))'>" + k +"</span>\n"
+	for k, _ := range routingTable.Table {
+		origins += "<span onclick='openMessageWindow((this.textContent || this.innerText))'>" + k + "</span>\n"
 	}
 	return origins
+}
+
+func handlePrivateMessage(msg *PrivateMessage, gossip *Gossiper) {
+
+	if msg.Destination == gossip.Name {
+		fmt.Println("PRIVATE origin " + msg.Origin + " hop-limit " + strconv.FormatInt(int64(msg.HopLimit), 10) + " contents " + msg.Text)
+	} else {
+		if msg.HopLimit > 0 {
+			msg.HopLimit -= 1
+			newEncoded, err := protobuf.Encode(&GossipPacket{Private: msg})
+			if err != nil {
+				println("Gossiper Encode Error: " + err.Error())
+			}
+			nextHop := routingTable.Table[msg.Destination]
+			sendPacket(newEncoded, nextHop, gossip)
+		}
+	}
 }

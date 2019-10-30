@@ -5,7 +5,7 @@ import (
 	"github.com/dedis/protobuf"
 )
 
-func HandleSimpleMessagesFrom(gossip *Gossiper, name *string, gossipAddr *string) {
+func HandleSimpleMessagesFrom(gossip *Gossiper, gossipAddr *string) {
 	for {
 
 		pkt, _ := getAndDecodePacket(gossip)
@@ -42,7 +42,7 @@ func HandleSimpleMessagesFrom(gossip *Gossiper, name *string, gossipAddr *string
 	}
 }
 
-func HandleSimpleClientMessagesFrom(gossip *Gossiper, name *string, gossipAddr *string, peerGossip *Gossiper) {
+func HandleSimpleClientMessagesFrom(gossip *Gossiper, gossipAddr *string, peerGossip *Gossiper) {
 	for {
 
 		pkt := getAndDecodeFromClient(gossip)
@@ -52,7 +52,7 @@ func HandleSimpleClientMessagesFrom(gossip *Gossiper, name *string, gossipAddr *
 
 		fmt.Println("PEERS " + FormatPeers(Keys))
 
-		newMsg := SimpleMessage{*name, *gossipAddr, text}
+		newMsg := SimpleMessage{peerGossip.Name, *gossipAddr, text}
 
 		newPacketBytes, err := protobuf.Encode(&GossipPacket{Simple: &newMsg})
 		if err != nil {

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/SabrinaKall/Peerster/helper"
+	"github.com/dedis/protobuf"
 	chunker2 "github.com/restic/chunker"
 	"io"
 	"io/ioutil"
@@ -73,6 +74,129 @@ func ReadFileIntoChunks(filename string) {
 	Files[fileInfo.metahash] = fileInfo
 
 	fmt.Println("Metahash: " + fileInfo.metahash)
+}
+
+func handleRequestMessage(msg *DataRequest, gossip *Gossiper) {
+	if msg.Destination == gossip.Name {
+
+		testPrint("Request for me")
+
+		testPrint("Hash to get: " + hex.EncodeToString(msg.HashValue))
+		data, _ := getDataFor(msg.HashValue)
+
+		reply := DataReply{
+			Origin:      gossip.Name,
+			Destination: msg.Origin,
+			HopLimit:    HOP_LIMIT - 1,
+			HashValue:   msg.HashValue,
+			Data:        data,
+		}
+		newEncoded, err := protobuf.Encode(&GossipPacket{DataReply: &reply})
+		if err != nil {
+			println("Gossiper Encode Error: " + err.Error())
+		}
+		nextHop := routingTable.Table[reply.Destination]
+		sendPacket(newEncoded, nextHop, gossip)
+
+	} else {
+
+		testPrint("Request for " + msg.Destination)
+		if msg.HopLimit > 0 {
+			msg.HopLimit -= 1
+			newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: msg})
+			if err != nil {
+				println("Gossiper Encode Error: " + err.Error())
+			}
+			nextHop := routingTable.Table[msg.Destination]
+			sendPacket(newEncoded, nextHop, gossip)
+		}
+	}
+
+}
+
+func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
+	if msg.Destination == gossip.Name {
+		//save chunk/metafile and send for next
+		testPrint("Reply for me")
+
+		fileInfo, meta, here, err := findFileWithHash(msg.HashValue)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		if here && !fileInfo.downloadComplete && len(msg.Data) > 0 {
+			shaCheck := sha256.Sum256(msg.Data)
+
+			if helper.Equal(msg.HashValue, fileInfo.hashCurrentlyBeingFetched) && helper.Equal(shaCheck[:], msg.HashValue) {
+
+				if !fileInfo.metafileFetched && meta {
+					fmt.Println("DOWNLOADING metafile of " + fileInfo.filename + " from " + msg.Origin)
+					fileInfo.metafile = msg.Data
+					fileInfo.metafileFetched = true
+					fileInfo.chunkIndexBeingFetched = 0
+
+					fileInfo.nbChunks = int(math.Ceil(float64(float64(len(msg.Data)) / float64(32))))
+
+				} else {
+					fmt.Println("DOWNLOADING " + fileInfo.filename + " chunk " + strconv.Itoa(fileInfo.chunkIndexBeingFetched+1) + "  from " + msg.Origin)
+					key := hex.EncodeToString(fileInfo.hashCurrentlyBeingFetched)
+					fileInfo.orderedHashes[key] = fileInfo.chunkIndexBeingFetched
+					fileInfo.orderedChunks[fileInfo.chunkIndexBeingFetched] = msg.Data
+
+					fileInfo.filesize += len(msg.Data)
+					fileInfo.chunkIndexBeingFetched += 1
+
+				}
+
+				fmt.Println("Index being fetched: " + strconv.Itoa(fileInfo.chunkIndexBeingFetched))
+				fmt.Println("Nb Chunks: " + strconv.Itoa(fileInfo.nbChunks))
+
+				if fileInfo.chunkIndexBeingFetched >= fileInfo.nbChunks {
+					downloadFile(*fileInfo)
+				} else {
+					nextChunkHash := fileInfo.metafile[32*(fileInfo.chunkIndexBeingFetched) : 32*(fileInfo.chunkIndexBeingFetched+1)]
+					testPrint("Next hash: " + hex.EncodeToString(nextChunkHash))
+					fileInfo.hashCurrentlyBeingFetched = nextChunkHash
+					testPrint("Saved next hash: " + hex.EncodeToString(fileInfo.hashCurrentlyBeingFetched))
+
+					newMsg := DataRequest{
+						Origin:      gossip.Name,
+						Destination: msg.Origin,
+						HopLimit:    HOP_LIMIT - 1,
+						HashValue:   nextChunkHash,
+					}
+					testPrint("Hash for new chunk: " + hex.EncodeToString(nextChunkHash))
+
+					newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &newMsg})
+					if err != nil {
+						println("Gossiper Encode Error: " + err.Error())
+					}
+
+					Files[fileInfo.metahash] = *fileInfo
+
+					nextHop := routingTable.Table[newMsg.Destination]
+					sendPacket(newEncoded, nextHop, gossip)
+
+					go downloadCountDown(hex.EncodeToString(msg.HashValue), nextChunkHash, newMsg, gossip)
+				}
+
+			}
+
+		} else {
+
+			testPrint("Reply for " + msg.Destination)
+			if msg.HopLimit > 0 {
+				msg.HopLimit -= 1
+				newEncoded, err := protobuf.Encode(&GossipPacket{DataReply: msg})
+				if err != nil {
+					println("Gossiper Encode Error: " + err.Error())
+				}
+				nextHop := routingTable.Table[msg.Destination]
+				sendPacket(newEncoded, nextHop, gossip)
+			}
+		}
+
+	}
 }
 
 func getDataFor(hash []byte) ([]byte, bool) {

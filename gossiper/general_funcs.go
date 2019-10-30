@@ -18,7 +18,7 @@ func FormatPeers(peerSlice []string) string {
 
 func getAndDecodePacket(gossip *Gossiper) (GossipPacket, string) {
 
-	packetBytes := make([]byte, 1024)
+	packetBytes := make([]byte, PACKET_SIZE)
 	_, sender, err := gossip.conn.ReadFromUDP(packetBytes)
 	if err != nil {
 		print("Gossiper funcs Read Error: " + err.Error() + "\n")
