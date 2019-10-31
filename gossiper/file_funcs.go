@@ -1,15 +1,12 @@
 package gossiper
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/SabrinaKall/Peerster/helper"
 	"github.com/dedis/protobuf"
-	chunker2 "github.com/restic/chunker"
-	"io"
 	"io/ioutil"
 	"math"
 	"strconv"
@@ -22,9 +19,10 @@ func ReadFileIntoChunks(filename string) {
 	data, err := ioutil.ReadFile(FILE_FOLDER + filename)
 	checkErr(err)
 
-	nbChunks := int(math.Ceil(float64(len(data) / CHUNK_SIZE)))
+	nbChunks := int(math.Ceil(float64(len(data)) / float64(CHUNK_SIZE)))
 
 	if nbChunks == 0 {
+		fmt.Println("TEST Rounding up")
 		nbChunks = 1
 	}
 
@@ -33,7 +31,7 @@ func ReadFileIntoChunks(filename string) {
 	fileInfo := FileInfo{
 		filename:                  filename,
 		filesize:                  len(data),
-		metafile:                  make([]byte, 32*nbChunks),
+		metafile:                  make([]byte, SHA_SIZE*nbChunks),
 		orderedHashes:             make(map[string]int),
 		orderedChunks:             make(map[int][]byte),
 		metahash:                  "",
@@ -44,28 +42,25 @@ func ReadFileIntoChunks(filename string) {
 		nbChunks:                  nbChunks,
 	}
 
-	// create a chunker
-	chunker := chunker2.New(bytes.NewReader(data), chunker2.Pol(0x3DA3358B4DC173))
-
-	// reuse this buffer
-	buf := make([]byte, CHUNK_SIZE) //8kB
-
 	for i := 0; i < nbChunks; i++ {
-		chunk, err := chunker.Next(buf)
-		if err != nil {
-			fmt.Println(err)
+
+		var buf []byte
+		if i == nbChunks-1 {
+			buf = data[i*CHUNK_SIZE:]
+		} else {
+			buf = data[i*CHUNK_SIZE : ((i + 1) * CHUNK_SIZE)]
 		}
-		chunkSha := sha256.Sum256(chunk.Data)
+		chunkSha := sha256.Sum256(buf)
 		for j := 0; j < len(chunkSha); j++ {
-			fileInfo.metafile[i+j] = chunkSha[j]
+			fileInfo.metafile[(i*SHA_SIZE)+j] = chunkSha[j]
 		}
 		chunkShaString := hex.EncodeToString(chunkSha[:])
 
+		fmt.Println("Sha  " + strconv.Itoa(i) + ": " + chunkShaString)
+		fmt.Println("Metafile: " + hex.EncodeToString(fileInfo.metafile))
+
 		fileInfo.orderedHashes[chunkShaString] = i
-		fileInfo.orderedChunks[i] = chunk.Data
-		if err == io.EOF {
-			break
-		}
+		fileInfo.orderedChunks[i] = buf
 	}
 
 	metahash := sha256.Sum256(fileInfo.metafile)
@@ -74,7 +69,6 @@ func ReadFileIntoChunks(filename string) {
 	Files[fileInfo.metahash] = fileInfo
 
 	fmt.Println("Metahash: " + fileInfo.metahash)
-	fmt.Println(Files)
 }
 
 func handleRequestMessage(msg *DataRequest, gossip *Gossiper) {
@@ -155,7 +149,7 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 				if fileInfo.chunkIndexBeingFetched >= fileInfo.nbChunks {
 					downloadFile(*fileInfo)
 				} else {
-					nextChunkHash := fileInfo.metafile[32*(fileInfo.chunkIndexBeingFetched) : 32*(fileInfo.chunkIndexBeingFetched+1)]
+					nextChunkHash := fileInfo.metafile[SHA_SIZE*(fileInfo.chunkIndexBeingFetched) : SHA_SIZE*(fileInfo.chunkIndexBeingFetched+1)]
 					testPrint("Next hash: " + hex.EncodeToString(nextChunkHash))
 					fileInfo.hashCurrentlyBeingFetched = nextChunkHash
 					testPrint("Saved next hash: " + hex.EncodeToString(fileInfo.hashCurrentlyBeingFetched))
@@ -202,8 +196,6 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 
 func getDataFor(hash []byte) ([]byte, bool) {
 
-	fmt.Println("Files: ")
-	fmt.Println(Files)
 	key := hex.EncodeToString(hash)
 
 	metafileToSend, isMeta := Files[key]

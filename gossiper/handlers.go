@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strings"
 )
 
 func GetIdHandler(w http.ResponseWriter, r *http.Request) {
@@ -125,15 +124,12 @@ func GetFileUploadHandler(w http.ResponseWriter, r *http.Request) {
 			println("Write to file err: " + err.Error())
 		}
 		defer file.Close()
-		name := strings.Split(header.Filename, ".")
-		fmt.Printf("File name %s\n", name[0])
 		// Copy the file data to my buffer
 		io.Copy(&Buf, file)
 		// do something with the contents...
 		// I normally have a struct defined and unmarshal into a struct, but this will
 		// work as an example
 		contents := Buf.String()
-		fmt.Println(contents)
 		err = writeToFile(header.Filename, contents)
 		if err != nil {
 			println("Write to file err: " + err.Error())

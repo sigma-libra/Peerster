@@ -192,8 +192,8 @@ func downloadCountDown(key string, hash []byte, msg DataRequest, peerGossiper *G
 	ticker := time.NewTicker(DOWNLOAD_COUNTDOWN_TIME * time.Second)
 	<-ticker.C
 
-	fileInfo, _, _, _ := findFileWithHash(hash)
-	if helper.Equal(fileInfo.hashCurrentlyBeingFetched, hash) {
+	fileInfo, _, found, _ := findFileWithHash(hash)
+	if found && helper.Equal(fileInfo.hashCurrentlyBeingFetched, hash) && !fileInfo.downloadComplete {
 
 		newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &msg})
 		if err != nil {
