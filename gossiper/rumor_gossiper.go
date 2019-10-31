@@ -40,6 +40,10 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 	}
 }
 
+func exists(str *string) bool {
+	return str != nil && *str != ""
+}
+
 func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Gossiper) {
 
 	//ex3: uiport, dest, msg
@@ -54,7 +58,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 		file := clientMessage.File
 		request := clientMessage.Request
 
-		if dest != nil && *dest != "" && file != nil && *file != "" && request != nil { //ex6: uiport, dest,file, request
+		if text == "" && exists(dest) && exists(file) && request != nil { //ex6: !text, dest, file, request
 
 			key := hex.EncodeToString(*request)
 
@@ -79,7 +83,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 
 			go downloadCountDown(key, *request, msg, peerGossiper)
 
-		} else if text != "" && dest != nil && *dest != "" { //case ex3: uiport, dest, msg
+		} else if text != "" && exists(dest) && !exists(file) && request == nil { //case ex3: text, dest, !file, !request
 			fmt.Println("CLIENT MESSAGE " + text)
 
 			msg := PrivateMessage{
@@ -100,7 +104,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 			nextHop := routingTable.Table[msg.Destination]
 			sendPacket(newEncoded, nextHop, peerGossiper)
 
-		} else if text != "" { //HW1 rumor message
+		} else if text != "" && exists(dest) && !exists(file) && request == nil { //HW1 rumor message: //text, !dest, !file, !request
 			fmt.Println("CLIENT MESSAGE " + text)
 
 			msg := RumorMessage{
@@ -128,6 +132,8 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 				go statusCountDown(msg, randomPeer, peerGossiper)
 			}
 
+		} else if text == "" && !exists(dest) && exists(file) && request == nil { //hw4 - upload file: !text, !dest, file, !request
+			ReadFileIntoChunks(*file)
 		}
 
 		fmt.Println("PEERS " + FormatPeers(Keys))

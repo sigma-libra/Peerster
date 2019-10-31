@@ -16,7 +16,7 @@ function send_message() {
 
 // Use a named immediately-invoked function expression.
 function getMessages() {
-    $.getJSON('http://localhost:8080/message', function(data) {
+    $.getJSON('/message', function(data) {
         var idField = document.getElementById('MessagesField');
         idField.innerHTML = "Messages: \n" + data;
         setTimeout(getMessages, 2000);
@@ -24,7 +24,7 @@ function getMessages() {
 }
 
 function getNodes() {
-    $.getJSON('http://localhost:8080/nodes', function(data) {
+    $.getJSON('/nodes', function(data) {
         var idField = document.getElementById('PeersField');
         idField.innerHTML = "Peers: \n" + data;
         setTimeout(getNodes, 2000);
@@ -32,7 +32,7 @@ function getNodes() {
 }
 
 function getId() {
-    $.getJSON('http://localhost:8080/id', function(data) {
+    $.getJSON('/id', function(data) {
         // Now that we've completed the request schedule the next one.
         var idField = document.getElementById('PeerIdField');
         idField.innerHTML = "Peer ID: " + data;
@@ -40,7 +40,7 @@ function getId() {
 }
 
 function getmessageableNodes() {
-    $.getJSON('http://localhost:8080/private_message', function(data) {
+    $.getJSON('/private_message', function(data) {
         // Now that we've completed the request schedule the next one.
         var messageable = document.getElementById('MessageableField');
         messageable.innerHTML = "Messageable nodes (clickeable): \n" + data;

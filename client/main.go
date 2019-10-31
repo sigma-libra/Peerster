@@ -37,9 +37,7 @@ func main() {
 		}
 	}
 
-	if indexFileLocally {
-		gossiper.ReadFileIntoChunks(*file)
-	} else if sendPrivateMessage || sendRumorMessage {
+	if indexFileLocally || sendPrivateMessage || sendRumorMessage {
 		gossiper.SendClientMessage(msg, uiport, dest, nil, file)
 	} else {
 		fmt.Println("ERROR (Bad argument combination)")

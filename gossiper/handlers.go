@@ -168,7 +168,8 @@ func GetFileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 				fmt.Println("​ ERROR (Unable to decode hex hash)")
 				os.Exit(1)
 			}
-			SendClientMessage(nil, &PeerUIPort, &dst, &fileHash, &name)
+			emptyMsg := ""
+			SendClientMessage(&emptyMsg, &PeerUIPort, &dst, &fileHash, &name)
 		}
 
 	default:

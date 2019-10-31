@@ -74,6 +74,7 @@ func ReadFileIntoChunks(filename string) {
 	Files[fileInfo.metahash] = fileInfo
 
 	fmt.Println("Metahash: " + fileInfo.metahash)
+	fmt.Println(Files)
 }
 
 func handleRequestMessage(msg *DataRequest, gossip *Gossiper) {
@@ -182,25 +183,27 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 
 			}
 
-		} else {
-
-			testPrint("Reply for " + msg.Destination)
-			if msg.HopLimit > 0 {
-				msg.HopLimit -= 1
-				newEncoded, err := protobuf.Encode(&GossipPacket{DataReply: msg})
-				if err != nil {
-					println("Gossiper Encode Error: " + err.Error())
-				}
-				nextHop := routingTable.Table[msg.Destination]
-				sendPacket(newEncoded, nextHop, gossip)
-			}
 		}
+	} else {
 
+		testPrint("Reply for " + msg.Destination)
+		if msg.HopLimit > 0 {
+			msg.HopLimit -= 1
+			newEncoded, err := protobuf.Encode(&GossipPacket{DataReply: msg})
+			if err != nil {
+				println("Gossiper Encode Error: " + err.Error())
+			}
+			nextHop := routingTable.Table[msg.Destination]
+			sendPacket(newEncoded, nextHop, gossip)
+		}
 	}
+
 }
 
 func getDataFor(hash []byte) ([]byte, bool) {
 
+	fmt.Println("Files: ")
+	fmt.Println(Files)
 	key := hex.EncodeToString(hash)
 
 	metafileToSend, isMeta := Files[key]
