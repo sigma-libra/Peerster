@@ -6,13 +6,15 @@ import (
 	"github.com/SabrinaKall/Peerster/helper"
 	"github.com/dedis/protobuf"
 	"math/rand"
+	"strconv"
 	"time"
 )
 
 func HandleRumorMessagesFrom(gossip *Gossiper) {
 
-	SendRouteRumor(gossip)
-	go FireRouteRumor(gossip)
+	if RTimer > 0 {
+		go FireRouteRumor(gossip)
+	}
 
 	for {
 
@@ -58,11 +60,15 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 		file := clientMessage.File
 		request := clientMessage.Request
 
+		fmt.Println("text: " + strconv.FormatBool(text != ""))
+		fmt.Println("dest: " + strconv.FormatBool(exists(dest)))
+		fmt.Println("file: " + strconv.FormatBool(exists(file)))
+		fmt.Println("request: " + strconv.FormatBool(request != nil))
+
+
 		if text == "" && exists(dest) && exists(file) && request != nil { //ex6: !text, dest, file, request
 
 			key := hex.EncodeToString(*request)
-
-			fmt.Println("Hash at client handler: " + key)
 
 			Files[key] = InitFileInfo(*file, *request)
 
@@ -84,7 +90,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 			go downloadCountDown(key, *request, msg, peerGossiper)
 
 		} else if text != "" && exists(dest) && !exists(file) && request == nil { //case ex3: text, dest, !file, !request
-			fmt.Println("CLIENT MESSAGE " + text)
+			fmt.Println("(private) CLIENT MESSAGE " + text)
 
 			msg := PrivateMessage{
 				Origin:      name,
@@ -104,7 +110,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 			nextHop := routingTable.Table[msg.Destination]
 			sendPacket(newEncoded, nextHop, peerGossiper)
 
-		} else if text != "" && exists(dest) && !exists(file) && request == nil { //HW1 rumor message: //text, !dest, !file, !request
+		} else if text != "" && !exists(dest) && !exists(file) && request == nil { //HW1 rumor message: //text, !dest, !file, !request
 			fmt.Println("CLIENT MESSAGE " + text)
 
 			msg := RumorMessage{

@@ -10,11 +10,27 @@ import (
 	"os"
 )
 
+type IDStruct struct {
+	Name    string
+	Port    string
+	Guiport string
+}
+
+func SetNodeID(name string, port string, guiport string) {
+	NodeID = IDStruct{
+		Name:    name,
+		Port:    port,
+		Guiport: guiport,
+	}
+}
 func GetIdHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		id := "Name: " + PeerName + "(Port: " + PeerUIPort + ")"
-		idJSON, err := json.Marshal(id)
+
+		//id := "Name: " + PeerName + "(Port: " + PeerUIPort + ")"
+		fmt.Println(NodeID)
+		idJSON, err := json.Marshal(NodeID)
+		fmt.Println(string(idJSON))
 		if err != nil {
 			println("frontend error: " + err.Error())
 		}

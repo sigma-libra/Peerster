@@ -2,6 +2,7 @@ package gossiper
 
 var Files = make(map[string]FileInfo)
 
+var NodeID IDStruct
 var messages = ""
 var nodes = ""
 var PeerName = ""

@@ -35,10 +35,14 @@ function getId() {
     $.getJSON('/id', function(data) {
         // Now that we've completed the request schedule the next one.
         var idField = document.getElementById('PeerIdField');
-        idField.innerHTML = "Peer ID: " + data;
+        idField.innerHTML = "Peer ID: \n * Name: " + data.Name + "\n * UIPort: " + data.Port;
     });
 }
 
+function uploadfile() {
+    $.post("/uploadFile", {"dst":dst, "hash":hash, "name":name});
+    return "http://localhost:8080/uploadFile"
+}
 function getmessageableNodes() {
     $.getJSON('/private_message', function(data) {
         // Now that we've completed the request schedule the next one.
@@ -48,6 +52,7 @@ function getmessageableNodes() {
     });
 }
 
+//used in manually parsed html - do not delete
 function openMessageWindow(e) {
     //alert($(e.target).text());
     //var t = $(e.target).text();

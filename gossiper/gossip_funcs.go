@@ -14,14 +14,14 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 
 	//update routing table
 	if msg.Origin != gossip.Name {
-		lastID, originKnown := routingTable.LastMsgID[msg.Origin]
-		prevSender, prevExists := routingTable.Table[msg.Origin]
+		lastID, lastIDExists := routingTable.LastMsgID[msg.Origin]
+		prevSender, prevSenderExists := routingTable.Table[msg.Origin]
 
-		if !originKnown || lastID < msg.ID  {
+		if !lastIDExists || lastID < msg.ID  {
 			routingTable.Table[msg.Origin] = sender
 			routingTable.LastMsgID[msg.Origin] = msg.ID
 
-			if !prevExists || (prevExists&& prevSender != sender) {
+			if !prevSenderExists || (prevSender != sender) {
 				fmt.Println("DSDV " + msg.Origin + " " + sender)
 			}
 		}

@@ -11,9 +11,9 @@ import (
 func FireRouteRumor(gossip *Gossiper) {
 	if RTimer > 0 {
 		for {
+			SendRouteRumor(gossip)
 			ticker := time.NewTicker(time.Duration(RTimer) * time.Second)
 			<-ticker.C
-			SendRouteRumor(gossip)
 		}
 	}
 }
