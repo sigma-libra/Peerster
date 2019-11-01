@@ -25,7 +25,7 @@ func main() {
 
 	flag.Parse()
 
-	gossiper.PeerName = *name //for handler
+	gossiper.PeerName = *name //for handlertre
 	gossiper.PeerUIPort = *uiport
 	gossiper.AntiEntropy = *antiEntropy
 	gossiper.RTimer = *rtimer

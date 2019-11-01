@@ -21,7 +21,7 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 			routingTable.Table[msg.Origin] = sender
 			routingTable.LastMsgID[msg.Origin] = msg.ID
 
-			if !prevSenderExists || (prevSender != sender) {
+			if (!prevSenderExists || (prevSender != sender)) && msg.Text != "" {
 				fmt.Println("DSDV " + msg.Origin + " " + sender)
 			}
 		}

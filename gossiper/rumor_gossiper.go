@@ -90,7 +90,8 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 			go downloadCountDown(key, *request, msg, peerGossiper)
 
 		} else if text != "" && exists(dest) && !exists(file) && request == nil { //case ex3: text, dest, !file, !request
-			fmt.Println("(private) CLIENT MESSAGE " + text)
+		//CLIENT MESSAGE <msg_text> dest <dst_name>
+			fmt.Println("CLIENT MESSAGE " + text + " dest " + *dest)
 
 			msg := PrivateMessage{
 				Origin:      name,
