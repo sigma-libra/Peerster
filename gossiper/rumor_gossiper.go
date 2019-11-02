@@ -98,7 +98,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 				ID:          0,
 				Text:        text,
 				Destination: *dest,
-				HopLimit:    HOP_LIMIT,
+				HopLimit:    HOP_LIMIT - 1,
 			}
 
 			messages += msg.Origin + " (private): " + msg.Text + "\n"

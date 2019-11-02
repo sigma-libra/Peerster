@@ -15,22 +15,19 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 	//update routing table
 	if msg.Origin != gossip.Name {
 		lastID, lastIDExists := routingTable.LastMsgID[msg.Origin]
-		prevSender, prevSenderExists := routingTable.Table[msg.Origin]
 
-		if !lastIDExists || lastID < msg.ID  {
+		if !lastIDExists || lastID < msg.ID {
 			routingTable.Table[msg.Origin] = sender
 			routingTable.LastMsgID[msg.Origin] = msg.ID
 
-			if (!prevSenderExists || (prevSender != sender)) && msg.Text != "" {
+			if msg.Text != "" {
 				fmt.Println("DSDV " + msg.Origin + " " + sender)
 			}
 		}
 	}
 
-	if msg.Text != "" {
-		printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.Text
-		fmt.Println(printMsg)
-	}
+	printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.Text
+	fmt.Println(printMsg)
 
 	receivedBefore := (gossip.wantMap[msg.Origin].NextID > msg.ID) //|| (msg.Origin == gossip.Name)
 
