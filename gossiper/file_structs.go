@@ -10,7 +10,8 @@ type FileInfo struct {
 	orderedChunks map[int][]byte //list of chunks by index
 	metahash      string         //The hex encoded SHA-256 hash of the metafile.
 
-	downloadComplete          bool   //if complete file on node
+	downloadComplete          bool //if complete file on node
+	downloadInterrupted       bool
 	metafileFetched           bool   //if metafile on node
 	chunkIndexBeingFetched    int    //highest unknown chunk
 	hashCurrentlyBeingFetched []byte //hash of highest unknown chunk
@@ -41,6 +42,7 @@ func InitFileInfo(filename string, metahash []byte) FileInfo {
 		orderedChunks:             make(map[int][]byte),
 		metahash:                  hex.EncodeToString(metahash),
 		downloadComplete:          false,
+		downloadInterrupted:       false,
 		metafileFetched:           false,
 		chunkIndexBeingFetched:    0,
 		hashCurrentlyBeingFetched: metahash,

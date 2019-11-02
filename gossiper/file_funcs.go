@@ -36,6 +36,7 @@ func ReadFileIntoChunks(filename string) {
 		orderedChunks:             make(map[int][]byte),
 		metahash:                  "",
 		downloadComplete:          true,
+		downloadInterrupted:       false,
 		metafileFetched:           true,
 		chunkIndexBeingFetched:    nbChunks,
 		hashCurrentlyBeingFetched: nil,
@@ -121,62 +122,65 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 			fmt.Println(err)
 		}
 
-		if here && !fileInfo.downloadComplete && len(msg.Data) > 0 {
-			shaCheck := sha256.Sum256(msg.Data)
+		if here && !fileInfo.downloadComplete {
 
-			if helper.Equal(msg.HashValue, fileInfo.hashCurrentlyBeingFetched) && helper.Equal(shaCheck[:], msg.HashValue) {
+			if len(msg.Data) > 0 {
+				fileInfo.downloadInterrupted = true
+			} else {
+				shaCheck := sha256.Sum256(msg.Data)
 
-				if !fileInfo.metafileFetched && meta {
-					fmt.Println("DOWNLOADING metafile of " + fileInfo.filename + " from " + msg.Origin)
-					fileInfo.metafile = msg.Data
-					fileInfo.metafileFetched = true
-					fileInfo.chunkIndexBeingFetched = 0
+				if helper.Equal(msg.HashValue, fileInfo.hashCurrentlyBeingFetched) && helper.Equal(shaCheck[:], msg.HashValue) {
 
-					fileInfo.nbChunks = int(math.Ceil(float64(float64(len(msg.Data)) / float64(32))))
+					if !fileInfo.metafileFetched && meta {
+						fileInfo.metafile = msg.Data
+						fileInfo.metafileFetched = true
+						fileInfo.chunkIndexBeingFetched = 0
 
-				} else {
-					fmt.Println("DOWNLOADING " + fileInfo.filename + " chunk " + strconv.Itoa(fileInfo.chunkIndexBeingFetched+1) + "  from " + msg.Origin)
-					key := hex.EncodeToString(fileInfo.hashCurrentlyBeingFetched)
-					fileInfo.orderedHashes[key] = fileInfo.chunkIndexBeingFetched
-					fileInfo.orderedChunks[fileInfo.chunkIndexBeingFetched] = msg.Data
+						fileInfo.nbChunks = int(math.Ceil(float64(float64(len(msg.Data)) / float64(32))))
 
-					fileInfo.filesize += len(msg.Data)
-					fileInfo.chunkIndexBeingFetched += 1
+					} else {
+						key := hex.EncodeToString(fileInfo.hashCurrentlyBeingFetched)
+						fileInfo.orderedHashes[key] = fileInfo.chunkIndexBeingFetched
+						fileInfo.orderedChunks[fileInfo.chunkIndexBeingFetched] = msg.Data
 
-				}
+						fileInfo.filesize += len(msg.Data)
+						fileInfo.chunkIndexBeingFetched += 1
 
-				fmt.Println("Index being fetched: " + strconv.Itoa(fileInfo.chunkIndexBeingFetched))
-				fmt.Println("Nb Chunks: " + strconv.Itoa(fileInfo.nbChunks))
-
-				if fileInfo.chunkIndexBeingFetched >= fileInfo.nbChunks {
-					downloadFile(*fileInfo)
-					fileInfo.downloadComplete = true
-				} else {
-					nextChunkHash := fileInfo.metafile[SHA_SIZE*(fileInfo.chunkIndexBeingFetched) : SHA_SIZE*(fileInfo.chunkIndexBeingFetched+1)]
-					fileInfo.hashCurrentlyBeingFetched = nextChunkHash
-
-					newMsg := DataRequest{
-						Origin:      gossip.Name,
-						Destination: msg.Origin,
-						HopLimit:    HOP_LIMIT - 1,
-						HashValue:   nextChunkHash,
-					}
-					testPrint("Hash for new chunk: " + hex.EncodeToString(nextChunkHash))
-					testPrint("Origin: " + newMsg.Origin)
-
-					newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &newMsg})
-					if err != nil {
-						println("Gossiper Encode Error: " + err.Error())
 					}
 
-					nextHop := routingTable.Table[newMsg.Destination]
-					sendPacket(newEncoded, nextHop, gossip)
+					fmt.Println("Index being fetched: " + strconv.Itoa(fileInfo.chunkIndexBeingFetched))
+					fmt.Println("Nb Chunks: " + strconv.Itoa(fileInfo.nbChunks))
 
-					go downloadCountDown(hex.EncodeToString(msg.HashValue), nextChunkHash, newMsg, gossip)
+					if fileInfo.chunkIndexBeingFetched >= fileInfo.nbChunks {
+						downloadFile(*fileInfo)
+						fileInfo.downloadComplete = true
+					} else {
+						fmt.Println("DOWNLOADING " + fileInfo.filename + " chunk " + strconv.Itoa(fileInfo.chunkIndexBeingFetched+1) + "  from " + msg.Origin)
+						nextChunkHash := fileInfo.metafile[SHA_SIZE*(fileInfo.chunkIndexBeingFetched) : SHA_SIZE*(fileInfo.chunkIndexBeingFetched+1)]
+						fileInfo.hashCurrentlyBeingFetched = nextChunkHash
+
+						newMsg := DataRequest{
+							Origin:      gossip.Name,
+							Destination: msg.Origin,
+							HopLimit:    HOP_LIMIT - 1,
+							HashValue:   nextChunkHash,
+						}
+						testPrint("Hash for new chunk: " + hex.EncodeToString(nextChunkHash))
+						testPrint("Origin: " + newMsg.Origin)
+
+						newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &newMsg})
+						if err != nil {
+							println("Gossiper Encode Error: " + err.Error())
+						}
+
+						nextHop := routingTable.Table[newMsg.Destination]
+						sendPacket(newEncoded, nextHop, gossip)
+
+						go downloadCountDown(hex.EncodeToString(msg.HashValue), nextChunkHash, newMsg, gossip)
+					}
+
+					Files[fileInfo.metahash] = *fileInfo
 				}
-
-				Files[fileInfo.metahash] = *fileInfo
-
 			}
 
 		}
@@ -227,15 +231,15 @@ func findFileWithHash(hash []byte) (*FileInfo, bool, bool, error) {
 	metafileToSend, isMeta := Files[hashString]
 
 	if isMeta {
-		return &metafileToSend, true, true, nil
+		return &metafileToSend, isMeta, true, nil
 	}
 
 	for _, fileInfo := range Files {
 		if helper.Equal(hash, fileInfo.hashCurrentlyBeingFetched) {
-			return &fileInfo, false, true, nil
+			return &fileInfo, isMeta, true, nil
 		}
 	}
-	return nil, false, false, errors.New("No such hash")
+	return nil, isMeta, false, errors.New("No such hash")
 }
 
 func downloadFile(fileInfo FileInfo) {

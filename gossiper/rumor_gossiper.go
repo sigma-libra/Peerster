@@ -87,6 +87,8 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 			nextHop := routingTable.Table[msg.Destination]
 			sendPacket(newEncoded, nextHop, peerGossiper)
 
+			fmt.Println("DOWNLOADING metafile of " + *file + " from " + *dest)
+
 			go downloadCountDown(key, *request, msg, peerGossiper)
 
 		} else if text != "" && exists(dest) && !exists(file) && request == nil { //case ex3: text, dest, !file, !request
@@ -199,12 +201,16 @@ func downloadCountDown(key string, hash []byte, msg DataRequest, peerGossiper *G
 	ticker := time.NewTicker(DOWNLOAD_COUNTDOWN_TIME * time.Second)
 	<-ticker.C
 
-	fileInfo, _, found, _ := findFileWithHash(hash)
-	if found && helper.Equal(fileInfo.hashCurrentlyBeingFetched, hash) && !fileInfo.downloadComplete {
+	fileInfo, isMeta, found, _ := findFileWithHash(hash)
+	if found && helper.Equal(fileInfo.hashCurrentlyBeingFetched, hash) && !fileInfo.downloadComplete && !fileInfo.downloadInterrupted {
 
 		newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &msg})
 		if err != nil {
 			println("Gossiper Encode Error: " + err.Error())
+		}
+
+		if isMeta {
+			fmt.Println("DOWNLOADING metafile of " + fileInfo.filename + " from " + msg.Destination)
 		}
 
 		nextHop := routingTable.Table[msg.Destination]
