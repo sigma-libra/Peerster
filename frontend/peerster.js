@@ -36,6 +36,7 @@ function getId() {
         // Now that we've completed the request schedule the next one.
         var idField = document.getElementById('PeerIdField');
         idField.innerHTML = "Peer ID: \n * Name: " + data.Name + "\n * UIPort: " + data.Port;
+        document.title = "Peerster " + data.Name
     });
 }
 

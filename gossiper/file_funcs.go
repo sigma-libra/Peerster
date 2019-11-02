@@ -90,7 +90,9 @@ func handleRequestMessage(msg *DataRequest, gossip *Gossiper) {
 		if err != nil {
 			println("Gossiper Encode Error: " + err.Error())
 		}
+		fmt.Println("Sending back to " + reply.Destination)
 		nextHop := routingTable.Table[reply.Destination]
+		fmt.Println("Next hop: " + nextHop)
 		sendPacket(newEncoded, nextHop, gossip)
 
 	} else {
@@ -148,11 +150,10 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 
 				if fileInfo.chunkIndexBeingFetched >= fileInfo.nbChunks {
 					downloadFile(*fileInfo)
+					fileInfo.downloadComplete = true
 				} else {
 					nextChunkHash := fileInfo.metafile[SHA_SIZE*(fileInfo.chunkIndexBeingFetched) : SHA_SIZE*(fileInfo.chunkIndexBeingFetched+1)]
-					testPrint("Next hash: " + hex.EncodeToString(nextChunkHash))
 					fileInfo.hashCurrentlyBeingFetched = nextChunkHash
-					testPrint("Saved next hash: " + hex.EncodeToString(fileInfo.hashCurrentlyBeingFetched))
 
 					newMsg := DataRequest{
 						Origin:      gossip.Name,
@@ -161,19 +162,20 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 						HashValue:   nextChunkHash,
 					}
 					testPrint("Hash for new chunk: " + hex.EncodeToString(nextChunkHash))
+					testPrint("Origin: " + newMsg.Origin)
 
 					newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &newMsg})
 					if err != nil {
 						println("Gossiper Encode Error: " + err.Error())
 					}
 
-					Files[fileInfo.metahash] = *fileInfo
-
 					nextHop := routingTable.Table[newMsg.Destination]
 					sendPacket(newEncoded, nextHop, gossip)
 
 					go downloadCountDown(hex.EncodeToString(msg.HashValue), nextChunkHash, newMsg, gossip)
 				}
+
+				Files[fileInfo.metahash] = *fileInfo
 
 			}
 
@@ -236,7 +238,7 @@ func findFileWithHash(hash []byte) (*FileInfo, bool, bool, error) {
 	return nil, false, false, errors.New("No such hash")
 }
 
-func downloadFile(fileInfo FileInfo) error {
+func downloadFile(fileInfo FileInfo) {
 
 	data := make([]byte, 0)
 
@@ -249,8 +251,6 @@ func downloadFile(fileInfo FileInfo) error {
 	checkErr(err)
 
 	fmt.Println("RECONSTRUCTED file " + fileInfo.filename)
-	fileInfo.downloadComplete = true
-	return nil
 
 }
 
