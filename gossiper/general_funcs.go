@@ -58,7 +58,7 @@ func AddPeer(peer string) {
 	if _, here := KnownPeers[peer]; !here {
 		KnownPeers[peer] = true
 		Keys = append(Keys, peer)
-		nodes += peer + "\n"
+		Nodes += peer + "\n"
 	}
 
 	if _, tracked := mongeringMessages[peer]; !tracked {

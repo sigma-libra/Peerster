@@ -57,9 +57,6 @@ func ReadFileIntoChunks(filename string) {
 		}
 		chunkShaString := hex.EncodeToString(chunkSha[:])
 
-		fmt.Println("Sha  " + strconv.Itoa(i) + ": " + chunkShaString)
-		fmt.Println("Metafile: " + hex.EncodeToString(fileInfo.metafile))
-
 		fileInfo.orderedHashes[chunkShaString] = i
 		fileInfo.orderedChunks[i] = buf
 	}
@@ -83,7 +80,7 @@ func handleRequestMessage(msg *DataRequest, gossip *Gossiper) {
 		reply := DataReply{
 			Origin:      gossip.Name,
 			Destination: msg.Origin,
-			HopLimit:    HOP_LIMIT - 1,
+			HopLimit:    HOP_LIMIT,
 			HashValue:   msg.HashValue,
 			Data:        data,
 		}
@@ -91,9 +88,8 @@ func handleRequestMessage(msg *DataRequest, gossip *Gossiper) {
 		if err != nil {
 			println("Gossiper Encode Error: " + err.Error())
 		}
-		fmt.Println("Sending back to " + reply.Destination)
-		nextHop := routingTable.Table[reply.Destination]
-		fmt.Println("Next hop: " + nextHop)
+
+		nextHop := RoutingTable.Table[reply.Destination]
 		sendPacket(newEncoded, nextHop, gossip)
 
 	} else {
@@ -105,7 +101,7 @@ func handleRequestMessage(msg *DataRequest, gossip *Gossiper) {
 			if err != nil {
 				println("Gossiper Encode Error: " + err.Error())
 			}
-			nextHop := routingTable.Table[msg.Destination]
+			nextHop := RoutingTable.Table[msg.Destination]
 			sendPacket(newEncoded, nextHop, gossip)
 		}
 	}
@@ -122,9 +118,9 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 			fmt.Println(err)
 		}
 
-		if here && !fileInfo.downloadComplete {
+		if here && !fileInfo.downloadComplete && !fileInfo.downloadInterrupted {
 
-			if len(msg.Data) > 0 {
+			if len(msg.Data) == 0 {
 				fileInfo.downloadInterrupted = true
 			} else {
 				shaCheck := sha256.Sum256(msg.Data)
@@ -148,21 +144,18 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 
 					}
 
-					fmt.Println("Index being fetched: " + strconv.Itoa(fileInfo.chunkIndexBeingFetched))
-					fmt.Println("Nb Chunks: " + strconv.Itoa(fileInfo.nbChunks))
-
 					if fileInfo.chunkIndexBeingFetched >= fileInfo.nbChunks {
 						downloadFile(*fileInfo)
 						fileInfo.downloadComplete = true
 					} else {
-						fmt.Println("DOWNLOADING " + fileInfo.filename + " chunk " + strconv.Itoa(fileInfo.chunkIndexBeingFetched+1) + "  from " + msg.Origin)
+						fmt.Println("DOWNLOADING " + fileInfo.filename + " chunk " + strconv.Itoa(fileInfo.chunkIndexBeingFetched+1) + " from " + msg.Origin)
 						nextChunkHash := fileInfo.metafile[SHA_SIZE*(fileInfo.chunkIndexBeingFetched) : SHA_SIZE*(fileInfo.chunkIndexBeingFetched+1)]
 						fileInfo.hashCurrentlyBeingFetched = nextChunkHash
 
 						newMsg := DataRequest{
 							Origin:      gossip.Name,
 							Destination: msg.Origin,
-							HopLimit:    HOP_LIMIT - 1,
+							HopLimit:    HOP_LIMIT,
 							HashValue:   nextChunkHash,
 						}
 						testPrint("Hash for new chunk: " + hex.EncodeToString(nextChunkHash))
@@ -173,7 +166,7 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 							println("Gossiper Encode Error: " + err.Error())
 						}
 
-						nextHop := routingTable.Table[newMsg.Destination]
+						nextHop := RoutingTable.Table[newMsg.Destination]
 						sendPacket(newEncoded, nextHop, gossip)
 
 						go downloadCountDown(hex.EncodeToString(msg.HashValue), nextChunkHash, newMsg, gossip)
@@ -193,7 +186,7 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 			if err != nil {
 				println("Gossiper Encode Error: " + err.Error())
 			}
-			nextHop := routingTable.Table[msg.Destination]
+			nextHop := RoutingTable.Table[msg.Destination]
 			sendPacket(newEncoded, nextHop, gossip)
 		}
 	}

@@ -6,9 +6,18 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"github.com/SabrinaKall/Peerster/gossiper"
+	"github.com/dedis/protobuf"
+	"net"
 	"os"
 )
+
+
+type Message struct {
+	Text        string
+	Destination *string
+	File        *string
+	Request     *[]byte
+}
 
 func main() {
 	uiport := flag.String("UIPort",
@@ -32,16 +41,50 @@ func main() {
 			os.Exit(1)
 		}
 		if requestFile {
-			gossiper.SendClientMessage(msg, uiport, dest, &fileHash, file)
+			SendClientMessage(msg, uiport, dest, &fileHash, file)
 			return
 		}
 	}
 
 	if indexFileLocally || sendPrivateMessage || sendRumorMessage {
-		gossiper.SendClientMessage(msg, uiport, dest, nil, file)
+		SendClientMessage(msg, uiport, dest, nil, file)
 	} else {
 		fmt.Println("ERROR (Bad argument combination)")
 		os.Exit(1)
 	}
 
+}
+
+func SendClientMessage(msg *string, uiport *string, dest *string, fileHash *[]byte, file *string) {
+
+	//To test file sending
+
+	//fmt.Println("Hash at client sending: " + hex.EncodeToString(*fileHash))
+	packet := Message{
+		Text:        *msg,
+		Destination: dest,
+		File:        file,
+		Request:     fileHash,
+	}
+	packetToSend, err := protobuf.Encode(&packet)
+	if err != nil {
+		print("Client Encode Error: " + err.Error() + "\n")
+	}
+
+	randomPort := "0"
+	clientUdpAddr, err := net.ResolveUDPAddr("udp4", "localhost:"+randomPort)
+	gossiperUdpAddr, err := net.ResolveUDPAddr("udp4", "localhost:"+*uiport)
+	if err != nil {
+		println("Client Resolve Addr Error: " + err.Error())
+	}
+	udpConn, err := net.ListenUDP("udp4", clientUdpAddr)
+	if err != nil {
+		print("Client ListenUDP Error: " + err.Error() + "\n")
+	}
+	_, err = udpConn.WriteToUDP(packetToSend, gossiperUdpAddr)
+	if err != nil {
+		println("Client Write To UDP: " + err.Error())
+	}
+
+	udpConn.Close()
 }

@@ -5,6 +5,12 @@ import (
 	"sync/atomic"
 )
 
+type IDStruct struct {
+	Name    string
+	Port    string
+	Guiport string
+}
+
 type RumorMessage struct {
 	Origin string
 	ID     uint32

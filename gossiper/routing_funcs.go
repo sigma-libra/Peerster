@@ -8,12 +8,15 @@ import (
 	"time"
 )
 
-func FireRouteRumor(gossip *Gossiper) {
+func FireRouteRumor(gossip *Gossiper, first bool) {
+	if first {
+		SendRouteRumor(gossip)
+	}
 	if RTimer > 0 {
 		ticker := time.NewTicker(time.Duration(RTimer) * time.Second)
 		<-ticker.C
 		SendRouteRumor(gossip)
-		go FireRouteRumor(gossip)
+		go FireRouteRumor(gossip, false)
 
 	}
 }
@@ -39,9 +42,9 @@ func makeRouteRumor(gossip *Gossiper) []byte {
 	return newEncoded
 }
 
-func parseRoutingTable() string {
+func ParseRoutingTable() string {
 	origins := ""
-	for k, _ := range routingTable.Table {
+	for k, _ := range RoutingTable.Table {
 		origins += "<span onclick='openMessageWindow((this.textContent || this.innerText))'>" + k + "</span>\n"
 	}
 	return origins
@@ -51,7 +54,7 @@ func handlePrivateMessage(msg *PrivateMessage, gossip *Gossiper) {
 
 	if msg.Destination == gossip.Name {
 		fmt.Println("PRIVATE origin " + msg.Origin + " hop-limit " + strconv.FormatInt(int64(msg.HopLimit), 10) + " contents " + msg.Text)
-		messages += msg.Origin + " (private): " + msg.Text + "\n"
+		Messages += msg.Origin + " (private): " + msg.Text + "\n"
 	} else {
 		if msg.HopLimit > 0 {
 			msg.HopLimit -= 1
@@ -59,7 +62,7 @@ func handlePrivateMessage(msg *PrivateMessage, gossip *Gossiper) {
 			if err != nil {
 				println("Gossiper Encode Error: " + err.Error())
 			}
-			nextHop := routingTable.Table[msg.Destination]
+			nextHop := RoutingTable.Table[msg.Destination]
 			sendPacket(newEncoded, nextHop, gossip)
 		}
 	}

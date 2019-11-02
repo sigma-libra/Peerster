@@ -13,7 +13,7 @@ import (
 func HandleRumorMessagesFrom(gossip *Gossiper) {
 
 	if RTimer > 0 {
-		go FireRouteRumor(gossip)
+		go FireRouteRumor(gossip, true)
 	}
 
 	for {
@@ -60,12 +60,6 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 		file := clientMessage.File
 		request := clientMessage.Request
 
-		fmt.Println("text: " + strconv.FormatBool(text != ""))
-		fmt.Println("dest: " + strconv.FormatBool(exists(dest)))
-		fmt.Println("file: " + strconv.FormatBool(exists(file)))
-		fmt.Println("request: " + strconv.FormatBool(request != nil))
-
-
 		if text == "" && exists(dest) && exists(file) && request != nil { //ex6: !text, dest, file, request
 
 			key := hex.EncodeToString(*request)
@@ -84,7 +78,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 				println("Gossiper Encode Error: " + err.Error())
 			}
 
-			nextHop := routingTable.Table[msg.Destination]
+			nextHop := RoutingTable.Table[msg.Destination]
 			sendPacket(newEncoded, nextHop, peerGossiper)
 
 			fmt.Println("DOWNLOADING metafile of " + *file + " from " + *dest)
@@ -103,14 +97,14 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 				HopLimit:    HOP_LIMIT - 1,
 			}
 
-			messages += msg.Origin + " (private): " + msg.Text + "\n"
+			Messages += msg.Origin + " (private): " + msg.Text + "\n"
 
 			newEncoded, err := protobuf.Encode(&GossipPacket{Private: &msg})
 			if err != nil {
 				println("Gossiper Encode Error: " + err.Error())
 			}
 
-			nextHop := routingTable.Table[msg.Destination]
+			nextHop := RoutingTable.Table[msg.Destination]
 			sendPacket(newEncoded, nextHop, peerGossiper)
 
 		} else if text != "" && !exists(dest) && !exists(file) && request == nil { //HW1 rumor message: //text, !dest, !file, !request
@@ -123,7 +117,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 			}
 
 			if msg.Text != "" {
-				messages += msg.Origin + ": " + msg.Text + "\n"
+				Messages += msg.Origin + ": " + msg.Text + "\n"
 			}
 
 			newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &msg})
@@ -211,9 +205,11 @@ func downloadCountDown(key string, hash []byte, msg DataRequest, peerGossiper *G
 
 		if isMeta {
 			fmt.Println("DOWNLOADING metafile of " + fileInfo.filename + " from " + msg.Destination)
+		} else {
+			fmt.Println("DOWNLOADING " + fileInfo.filename + " chunk " + strconv.Itoa(fileInfo.chunkIndexBeingFetched+1) + " from " + msg.Destination)
 		}
 
-		nextHop := routingTable.Table[msg.Destination]
+		nextHop := RoutingTable.Table[msg.Destination]
 		sendPacket(newEncoded, nextHop, peerGossiper)
 		go downloadCountDown(key, hash, msg, peerGossiper)
 	}

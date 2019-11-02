@@ -5,6 +5,7 @@ package main
 
 import (
 	"flag"
+	"github.com/SabrinaKall/Peerster/frontend"
 	"github.com/SabrinaKall/Peerster/gossiper"
 	"net/http"
 	"strings"
@@ -42,7 +43,7 @@ func main() {
 		gossiper.AddPeer(peer)
 	}
 
-	gossiper.SetNodeID(*name, *uiport, *guiport)
+	frontend.SetNodeID(*name, *uiport, *guiport)
 
 	if *simple {
 		go gossiper.HandleSimpleMessagesFrom(&peerGossiper, gossipAddr)
@@ -61,12 +62,12 @@ func main() {
 
 func setUpWindow(guiport string) {
 	http.Handle("/", http.FileServer(http.Dir("./frontend")))
-	http.HandleFunc("/id", gossiper.GetIdHandler)
-	http.HandleFunc("/message", gossiper.GetLatestRumorMessagesHandler)
-	http.HandleFunc("/private_message", gossiper.GetLatestMessageableNodesHandler)
-	http.HandleFunc("/nodes", gossiper.GetLatestNodesHandler)
-	http.HandleFunc("/uploadFile", gossiper.GetFileUploadHandler)
-	http.HandleFunc("/download", gossiper.GetFileDownloadHandler)
+	http.HandleFunc("/id", frontend.GetIdHandler)
+	http.HandleFunc("/message", frontend.GetLatestRumorMessagesHandler)
+	http.HandleFunc("/private_message", frontend.GetLatestMessageableNodesHandler)
+	http.HandleFunc("/nodes", frontend.GetLatestNodesHandler)
+	http.HandleFunc("/uploadFile", frontend.GetFileUploadHandler)
+	http.HandleFunc("/download", frontend.GetFileDownloadHandler)
 	for {
 
 		err := http.ListenAndServe( "localhost:" + guiport, nil)

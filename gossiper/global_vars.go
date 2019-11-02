@@ -3,14 +3,14 @@ package gossiper
 var Files = make(map[string]FileInfo)
 
 var NodeID IDStruct
-var messages = ""
-var nodes = ""
+var Messages = ""
+var Nodes = ""
 var PeerName = ""
 var PeerUIPort = ""
 var KnownPeers = make(map[string]bool)
 var Keys = make([]string, 0)
-var routingTable = InitRoutingTable()
-var mongeringMessages = make(map[string]map[string][]uint32) // map (ip we monger to) -> (origin of mongered message) -> (ids of mongered messages from origin)
+var RoutingTable = InitRoutingTable()
+var mongeringMessages = make(map[string]map[string][]uint32) // map (ip we monger to) -> (origin of mongered message) -> (ids of mongered Messages from origin)
 
 var AntiEntropy = 10
 

@@ -14,11 +14,11 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 
 	//update routing table
 	if msg.Origin != gossip.Name {
-		lastID, lastIDExists := routingTable.LastMsgID[msg.Origin]
+		lastID, lastIDExists := RoutingTable.LastMsgID[msg.Origin]
 
 		if !lastIDExists || lastID < msg.ID {
-			routingTable.Table[msg.Origin] = sender
-			routingTable.LastMsgID[msg.Origin] = msg.ID
+			RoutingTable.Table[msg.Origin] = sender
+			RoutingTable.LastMsgID[msg.Origin] = msg.ID
 
 			if msg.Text != "" {
 				fmt.Println("DSDV " + msg.Origin + " " + sender)
@@ -29,13 +29,15 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 	printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.Text
 	fmt.Println(printMsg)
 
+	fmt.Println(RoutingTable.Table)
+
 	receivedBefore := (gossip.wantMap[msg.Origin].NextID > msg.ID) //|| (msg.Origin == gossip.Name)
 
 	//message not received before: start mongering
 	if !receivedBefore {
 
 		if msg.Text != "" && (msg.Origin != gossip.Name) {
-			messages += msg.Origin + ": " + msg.Text + "\n"
+			Messages += msg.Origin + ": " + msg.Text + "\n"
 		}
 
 		//pick random peer to send to
@@ -75,7 +77,7 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 	printMsg := "STATUS from " + sender
 
-	//update our info about nodes
+	//update our info about Nodes
 	for _, wanted := range msg.Want {
 		initNode(wanted.Identifier, gossip)
 		printMsg += " peer " + wanted.Identifier + " nextID " + strconv.FormatUint(uint64(wanted.NextID), 10)
@@ -98,9 +100,9 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 	for _, wanted := range msg.Want {
 
 		if gossip.wantMap[wanted.Identifier].NextID > wanted.NextID {
-			//(1) The sender has ​ other new messages that the receiver peer has not yet seen,
-			// and if so repeats the rumormongering process by sending ​ one of those messages ​ to the same receiving peer​ .
-			//I have more messages - find the earliest one
+			//(1) The sender has ​ other new Messages that the receiver peer has not yet seen,
+			// and if so repeats the rumormongering process by sending ​ one of those Messages ​ to the same receiving peer​ .
+			//I have more Messages - find the earliest one
 			sendMessage = true
 
 			if wanted.NextID < smallestIDMissing {
@@ -110,10 +112,10 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 
 		} else if gossip.wantMap[wanted.Identifier].NextID < wanted.NextID {
 			//(2) The sending peer does not have anything new but sees from the exchanged
-			//status that the ​ receiver peer has new messages. Then the sending peer itself
+			//status that the ​ receiver peer has new Messages. Then the sending peer itself
 			//sends a  StatusPacket containing its status vector, which causes the
-			//receiver peer to send send the missing messages back ​ (one at a time); ​ (
-			//I have fewer messages - send status
+			//receiver peer to send send the missing Messages back ​ (one at a time); ​ (
+			//I have fewer Messages - send status
 			sendStatus = true
 
 		}
@@ -155,7 +157,7 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 	} else {
 		fmt.Println("IN SYNC WITH " + sender)
 
-		//(3) If neither peer has new messages, the sending peer (rumormongering) peer S
+		//(3) If neither peer has new Messages, the sending peer (rumormongering) peer S
 		//flips a coin (e.g., ​ rand.Int() % 2​ ), and either (heads) picks ​ a new
 		//random peer to send the rumor message to​ , or (tails) ceases the
 		//rumormongering process.

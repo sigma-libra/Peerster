@@ -37,7 +37,7 @@ func HandleSimpleMessagesFrom(gossip *Gossiper, gossipAddr *string) {
 			}
 		}
 
-		messages = messages + newOriginalName + ": " + msg.Contents + "\n"
+		Messages = Messages + newOriginalName + ": " + msg.Contents + "\n"
 
 	}
 }
@@ -63,7 +63,7 @@ func HandleSimpleClientMessagesFrom(gossip *Gossiper, gossipAddr *string, peerGo
 			sendPacket(newPacketBytes, dst, peerGossip)
 		}
 
-		messages = messages + gossip.Name + ": " + text + "\n"
+		Messages = Messages + gossip.Name + ": " + text + "\n"
 
 	}
 }
