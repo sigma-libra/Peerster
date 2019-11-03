@@ -14,19 +14,14 @@ import (
 
 func ReadFileIntoChunks(filename string) {
 
-	fmt.Println("reading file " + filename + " into chunks")
-
 	data, err := ioutil.ReadFile(FILE_FOLDER + filename)
 	checkErr(err)
 
 	nbChunks := int(math.Ceil(float64(len(data)) / float64(CHUNK_SIZE)))
 
 	if nbChunks == 0 {
-		fmt.Println("TEST Rounding up")
 		nbChunks = 1
 	}
-
-	fmt.Println("Nb chunks: " + strconv.Itoa(nbChunks))
 
 	fileInfo := FileInfo{
 		filename:                  filename,
@@ -66,15 +61,12 @@ func ReadFileIntoChunks(filename string) {
 
 	Files[fileInfo.metahash] = fileInfo
 
-	fmt.Println("Metahash: " + fileInfo.metahash)
+	//fmt.Println("Metahash: " + fileInfo.metahash)
 }
 
 func handleRequestMessage(msg *DataRequest, gossip *Gossiper) {
 	if msg.Destination == gossip.Name {
 
-		testPrint("Request for me")
-
-		testPrint("Hash to get: " + hex.EncodeToString(msg.HashValue))
 		data, _ := getDataFor(msg.HashValue)
 
 		reply := DataReply{
@@ -88,14 +80,14 @@ func handleRequestMessage(msg *DataRequest, gossip *Gossiper) {
 		if err != nil {
 			println("Gossiper Encode Error: " + err.Error())
 		}
-		fmt.Println("Sending back to " + reply.Destination)
+
 		nextHop := routingTable.Table[reply.Destination]
-		fmt.Println("Next hop: " + nextHop)
+
 		sendPacket(newEncoded, nextHop, gossip)
 
 	} else {
 
-		testPrint("Request for " + msg.Destination)
+
 		if msg.HopLimit > 0 {
 			msg.HopLimit -= 1
 			newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: msg})
@@ -112,11 +104,10 @@ func handleRequestMessage(msg *DataRequest, gossip *Gossiper) {
 func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 	if msg.Destination == gossip.Name {
 		//save chunk/metafile and send for next
-		testPrint("Reply for me")
 
 		fileInfo, meta, here, err := findFileWithHash(msg.HashValue)
 		if err != nil {
-			fmt.Println(err)
+			println(err)
 		}
 
 		if here && !fileInfo.downloadComplete {
@@ -146,9 +137,6 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 
 					}
 
-					fmt.Println("Index being fetched: " + strconv.Itoa(fileInfo.chunkIndexBeingFetched))
-					fmt.Println("Nb Chunks: " + strconv.Itoa(fileInfo.nbChunks))
-
 					if fileInfo.chunkIndexBeingFetched >= fileInfo.nbChunks {
 						downloadFile(*fileInfo)
 						fileInfo.downloadComplete = true
@@ -164,8 +152,6 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 							HopLimit:    HOP_LIMIT,
 							HashValue:   nextChunkHash,
 						}
-						testPrint("Hash for new chunk: " + hex.EncodeToString(nextChunkHash))
-						testPrint("Origin: " + newMsg.Origin)
 
 						newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &newMsg})
 						if err != nil {
@@ -185,7 +171,6 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 		}
 	} else {
 
-		testPrint("Reply for " + msg.Destination)
 		if msg.HopLimit > 0 {
 			msg.HopLimit -= 1
 			newEncoded, err := protobuf.Encode(&GossipPacket{DataReply: msg})
@@ -206,7 +191,6 @@ func getDataFor(hash []byte) ([]byte, bool) {
 	metafileToSend, isMeta := Files[key]
 
 	if isMeta {
-		fmt.Println("TEST found meta")
 		return metafileToSend.metafile, true
 
 	} else {
@@ -214,12 +198,10 @@ func getDataFor(hash []byte) ([]byte, bool) {
 		for _, fileInfo := range Files {
 			index, isHere := fileInfo.orderedHashes[key]
 			if isHere {
-				fmt.Println("TEST found chunk")
 				return fileInfo.orderedChunks[index], true
 			}
 		}
 	}
-	fmt.Println("TEST did not find hash")
 	return []byte{}, false
 
 }

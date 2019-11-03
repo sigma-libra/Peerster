@@ -15,8 +15,6 @@ type Message struct {
 func SendClientMessage(msg *string, uiport *string, dest *string, fileHash *[]byte, file *string) {
 
 	//To test file sending
-
-	//fmt.Println("Hash at client sending: " + hex.EncodeToString(*fileHash))
 	packet := Message{
 		Text:        *msg,
 		Destination: dest,

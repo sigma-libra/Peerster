@@ -217,6 +217,3 @@ func downloadCountDown(key string, hash []byte, msg DataRequest, peerGossiper *G
 
 }
 
-func testPrint(msg string) {
-	println("TEST " + msg)
-}

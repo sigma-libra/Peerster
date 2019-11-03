@@ -28,9 +28,7 @@ func GetIdHandler(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 
 		//id := "Name: " + PeerName + "(Port: " + PeerUIPort + ")"
-		fmt.Println(NodeID)
 		idJSON, err := json.Marshal(NodeID)
-		fmt.Println(string(idJSON))
 		if err != nil {
 			println("frontend error: " + err.Error())
 		}
@@ -64,7 +62,6 @@ func GetLatestRumorMessagesHandler(w http.ResponseWriter, r *http.Request) {
 			println(w, "ParseForm() err: %v", err)
 			return
 		}
-		//fmt.Fprintf(w, "Post from website! r.PostFrom = %v\n", r.PostForm)
 		newMessage := r.FormValue("newMessage")
 		dst := ""
 		SendClientMessage(&newMessage, &PeerUIPort, &dst, nil, nil)
@@ -93,7 +90,6 @@ func GetLatestNodesHandler(w http.ResponseWriter, r *http.Request) {
 			println(w, "ParseForm() err: %v", err)
 			return
 		}
-		//fmt.Fprintf(w, "Post from website! r.PostFrom = %v\n", r.PostForm)
 		newNode := r.FormValue("newNode")
 		AddPeer(newNode)
 	default:
@@ -121,7 +117,6 @@ func GetLatestMessageableNodesHandler(w http.ResponseWriter, r *http.Request) {
 			println(w, "ParseForm() err: %v", err)
 			return
 		}
-		//fmt.Fprintf(w, "Post from website! r.PostFrom = %v\n", r.PostForm)
 		newMessage := r.FormValue("newMessage")
 		dst := r.FormValue("dest")
 		SendClientMessage(&newMessage, &PeerUIPort, &dst, nil, nil)
@@ -169,7 +164,6 @@ func GetFileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 			println(w, "ParseForm() err: %v", err)
 			return
 		}
-		//fmt.Fprintf(w, "Post from website! r.PostFrom = %v\n", r.PostForm)
 		dst := r.FormValue("dst")
 		hash := r.FormValue("hash")
 		name := r.FormValue("name")
