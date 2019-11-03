@@ -13,6 +13,7 @@ import (
 func HandleRumorMessagesFrom(gossip *Gossiper) {
 
 	if RTimer > 0 {
+		SendRouteRumor(gossip)
 		go FireRouteRumor(gossip)
 	}
 
@@ -59,12 +60,6 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 		dest := clientMessage.Destination
 		file := clientMessage.File
 		request := clientMessage.Request
-
-		fmt.Println("text: " + strconv.FormatBool(text != ""))
-		fmt.Println("dest: " + strconv.FormatBool(exists(dest)))
-		fmt.Println("file: " + strconv.FormatBool(exists(file)))
-		fmt.Println("request: " + strconv.FormatBool(request != nil))
-
 
 		if text == "" && exists(dest) && exists(file) && request != nil { //ex6: !text, dest, file, request
 
@@ -211,6 +206,8 @@ func downloadCountDown(key string, hash []byte, msg DataRequest, peerGossiper *G
 
 		if isMeta {
 			fmt.Println("DOWNLOADING metafile of " + fileInfo.filename + " from " + msg.Destination)
+		} else {
+			fmt.Println("DOWNLOADING " + fileInfo.filename + " chunk " + strconv.Itoa(fileInfo.chunkIndexBeingFetched+1) + " from " + msg.Origin)
 		}
 
 		nextHop := routingTable.Table[msg.Destination]

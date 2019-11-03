@@ -57,9 +57,6 @@ func ReadFileIntoChunks(filename string) {
 		}
 		chunkShaString := hex.EncodeToString(chunkSha[:])
 
-		fmt.Println("Sha  " + strconv.Itoa(i) + ": " + chunkShaString)
-		fmt.Println("Metafile: " + hex.EncodeToString(fileInfo.metafile))
-
 		fileInfo.orderedHashes[chunkShaString] = i
 		fileInfo.orderedChunks[i] = buf
 	}
@@ -83,7 +80,7 @@ func handleRequestMessage(msg *DataRequest, gossip *Gossiper) {
 		reply := DataReply{
 			Origin:      gossip.Name,
 			Destination: msg.Origin,
-			HopLimit:    HOP_LIMIT - 1,
+			HopLimit:    HOP_LIMIT,
 			HashValue:   msg.HashValue,
 			Data:        data,
 		}
@@ -124,8 +121,9 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 
 		if here && !fileInfo.downloadComplete {
 
-			if len(msg.Data) > 0 {
+			if len(msg.Data) == 0 {
 				fileInfo.downloadInterrupted = true
+				Files[fileInfo.metahash] = *fileInfo
 			} else {
 				shaCheck := sha256.Sum256(msg.Data)
 
@@ -154,15 +152,16 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 					if fileInfo.chunkIndexBeingFetched >= fileInfo.nbChunks {
 						downloadFile(*fileInfo)
 						fileInfo.downloadComplete = true
+						Files[fileInfo.metahash] = *fileInfo
 					} else {
-						fmt.Println("DOWNLOADING " + fileInfo.filename + " chunk " + strconv.Itoa(fileInfo.chunkIndexBeingFetched+1) + "  from " + msg.Origin)
+						fmt.Println("DOWNLOADING " + fileInfo.filename + " chunk " + strconv.Itoa(fileInfo.chunkIndexBeingFetched+1) + " from " + msg.Origin)
 						nextChunkHash := fileInfo.metafile[SHA_SIZE*(fileInfo.chunkIndexBeingFetched) : SHA_SIZE*(fileInfo.chunkIndexBeingFetched+1)]
 						fileInfo.hashCurrentlyBeingFetched = nextChunkHash
 
 						newMsg := DataRequest{
 							Origin:      gossip.Name,
 							Destination: msg.Origin,
-							HopLimit:    HOP_LIMIT - 1,
+							HopLimit:    HOP_LIMIT,
 							HashValue:   nextChunkHash,
 						}
 						testPrint("Hash for new chunk: " + hex.EncodeToString(nextChunkHash))
@@ -176,10 +175,10 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 						nextHop := routingTable.Table[newMsg.Destination]
 						sendPacket(newEncoded, nextHop, gossip)
 
+						Files[fileInfo.metahash] = *fileInfo
+
 						go downloadCountDown(hex.EncodeToString(msg.HashValue), nextChunkHash, newMsg, gossip)
 					}
-
-					Files[fileInfo.metahash] = *fileInfo
 				}
 			}
 
@@ -252,6 +251,8 @@ func downloadFile(fileInfo FileInfo) {
 	}
 
 	err := ioutil.WriteFile(DOWNLOAD_FOLDER+fileInfo.filename, data, 0644)
+	checkErr(err)
+	err = ioutil.WriteFile(FILE_FOLDER+fileInfo.filename, data, 0644)
 	checkErr(err)
 
 	fmt.Println("RECONSTRUCTED file " + fileInfo.filename)
