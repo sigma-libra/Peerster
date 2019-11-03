@@ -1,6 +1,12 @@
 package gossiper
 
-var Files = make(map[string]FileInfo)
+import "sync"
+
+//var Files = make(map[string]FileInfo)
+var fileMemory = FileMemory{
+	mu:    sync.Mutex{},
+	Files: make(map[string]FileInfo),
+}
 
 var NodeID IDStruct
 var messages = ""
@@ -17,4 +23,9 @@ var AntiEntropy = 10
 var rumorID uint32 = 0
 
 var RTimer = 0
+
+type FileMemory struct {
+	mu sync.Mutex
+	Files map[string]FileInfo
+}
 

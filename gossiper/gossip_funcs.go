@@ -14,6 +14,7 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 
 	//update routing table
 	if msg.Origin != gossip.Name {
+		routingTable.mu.Lock()
 		lastID, lastIDExists := routingTable.LastMsgID[msg.Origin]
 
 		if !lastIDExists || lastID < msg.ID {
@@ -24,6 +25,7 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 				fmt.Println("DSDV " + msg.Origin + " " + sender)
 			}
 		}
+		routingTable.mu.Unlock()
 	}
 
 	printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.Text

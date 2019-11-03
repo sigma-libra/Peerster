@@ -3,10 +3,8 @@ package gossiper
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/SabrinaKall/Peerster/helper"
 	"github.com/dedis/protobuf"
 	"math/rand"
-	"strconv"
 	"time"
 )
 
@@ -65,7 +63,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 
 			key := hex.EncodeToString(*request)
 
-			Files[key] = InitFileInfo(*file, *request)
+			putInFileMemory(InitFileInfo(*file, *request))
 
 			msg := DataRequest{
 				Origin:      name,
@@ -79,7 +77,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 				println("Gossiper Encode Error: " + err.Error())
 			}
 
-			nextHop := routingTable.Table[msg.Destination]
+			nextHop := getNextHop(msg.Destination)
 			sendPacket(newEncoded, nextHop, peerGossiper)
 
 			fmt.Println("DOWNLOADING metafile of " + *file + " from " + *dest)
@@ -105,7 +103,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 				println("Gossiper Encode Error: " + err.Error())
 			}
 
-			nextHop := routingTable.Table[msg.Destination]
+			nextHop := getNextHop(msg.Destination)
 			sendPacket(newEncoded, nextHop, peerGossiper)
 
 		} else if text != "" && !exists(dest) && !exists(file) && request == nil { //HW1 rumor message: //text, !dest, !file, !request
@@ -191,29 +189,4 @@ func statusCountDown(msg RumorMessage, dst string, gossip *Gossiper) {
 
 }
 
-func downloadCountDown(key string, hash []byte, msg DataRequest, peerGossiper *Gossiper) {
-
-	ticker := time.NewTicker(DOWNLOAD_COUNTDOWN_TIME * time.Second)
-	<-ticker.C
-
-	fileInfo, isMeta, found, _ := findFileWithHash(hash)
-	if found && helper.Equal(fileInfo.hashCurrentlyBeingFetched, hash) && !fileInfo.downloadComplete && !fileInfo.downloadInterrupted {
-
-		newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &msg})
-		if err != nil {
-			println("Gossiper Encode Error: " + err.Error())
-		}
-
-		if isMeta {
-			fmt.Println("DOWNLOADING metafile of " + fileInfo.filename + " from " + msg.Destination)
-		} else {
-			fmt.Println("DOWNLOADING " + fileInfo.filename + " chunk " + strconv.Itoa(fileInfo.chunkIndexBeingFetched+1) + " from " + msg.Origin)
-		}
-
-		nextHop := routingTable.Table[msg.Destination]
-		sendPacket(newEncoded, nextHop, peerGossiper)
-		go downloadCountDown(key, hash, msg, peerGossiper)
-	}
-
-}
 

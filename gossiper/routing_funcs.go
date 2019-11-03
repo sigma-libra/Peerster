@@ -8,6 +8,12 @@ import (
 	"time"
 )
 
+func getNextHop(dest string) string {
+	routingTable.mu.Lock()
+	defer routingTable.mu.Unlock()
+	return routingTable.Table[dest]
+}
+
 func FireRouteRumor(gossip *Gossiper) {
 	if RTimer > 0 {
 		ticker := time.NewTicker(time.Duration(RTimer) * time.Second)
@@ -41,6 +47,8 @@ func makeRouteRumor(gossip *Gossiper) []byte {
 
 func parseRoutingTable() string {
 	origins := ""
+	routingTable.mu.Lock()
+	defer routingTable.mu.Unlock()
 	for k, _ := range routingTable.Table {
 		origins += "<span onclick='openMessageWindow((this.textContent || this.innerText))'>" + k + "</span>\n"
 	}
@@ -59,7 +67,7 @@ func handlePrivateMessage(msg *PrivateMessage, gossip *Gossiper) {
 			if err != nil {
 				println("Gossiper Encode Error: " + err.Error())
 			}
-			nextHop := routingTable.Table[msg.Destination]
+			nextHop := getNextHop(msg.Destination)
 			sendPacket(newEncoded, nextHop, gossip)
 		}
 	}
