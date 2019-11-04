@@ -61,14 +61,13 @@ func ReadFileIntoChunks(filename string) {
 
 	putInFileMemory(fileInfo)
 
-	println("Metahash: " + fileInfo.metahash)
+	//println("Metahash: " + fileInfo.metahash)
 }
 
 func putInFileMemory(info FileInfo) {
 	fileMemory.mu.Lock()
-	defer fileMemory.mu.Unlock()
 	fileMemory.Files[info.metahash] = info
-	return
+	fileMemory.mu.Unlock()
 }
 
 func getFromFileMemory(metaHashKey string) (FileInfo, bool) {
@@ -260,8 +259,8 @@ func downloadFile(fileInfo FileInfo) {
 
 	err := ioutil.WriteFile(DOWNLOAD_FOLDER+fileInfo.filename, data, 0644)
 	checkErr(err)
-	err = ioutil.WriteFile(FILE_FOLDER+fileInfo.filename, data, 0644)
-	checkErr(err)
+	//err = ioutil.WriteFile(FILE_FOLDER+fileInfo.filename, data, 0644)
+	//checkErr(err)
 
 	fmt.Println("RECONSTRUCTED file " + fileInfo.filename)
 
@@ -278,7 +277,7 @@ func downloadCountDown(key string, hash []byte, msg DataRequest, peerGossiper *G
 	ticker := time.NewTicker(DOWNLOAD_COUNTDOWN_TIME * time.Second)
 	<-ticker.C
 
-	fileInfo, isMeta, found := findFileWithHash(hash)
+	fileInfo, _, found := findFileWithHash(hash)
 	if found && helper.Equal(fileInfo.hashCurrentlyBeingFetched, hash) && !fileInfo.downloadComplete && !fileInfo.downloadInterrupted {
 
 		newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &msg})
@@ -286,11 +285,11 @@ func downloadCountDown(key string, hash []byte, msg DataRequest, peerGossiper *G
 			println("Gossiper Encode Error: " + err.Error())
 		}
 
-		if isMeta {
+		/*if isMeta {
 			fmt.Println("DOWNLOADING metafile of " + fileInfo.filename + " from " + msg.Destination)
 		} else {
 			fmt.Println("DOWNLOADING " + fileInfo.filename + " chunk " + strconv.Itoa(fileInfo.chunkIndexBeingFetched+1) + " from " + msg.Origin)
-		}
+		}*/
 
 		nextHop := getNextHop(msg.Destination)
 		sendPacket(newEncoded, nextHop, peerGossiper)
