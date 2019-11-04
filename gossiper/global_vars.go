@@ -9,6 +9,11 @@ var fileMemory = FileMemory{
 	Files: make(map[string]FileInfo),
 }
 
+var mongerer = Mongering{
+	mu:                sync.Mutex{},
+	mongeringMessages: make(map[string]map[string][]uint32),
+}
+
 var NodeID IDStruct
 var messages = ""
 var nodes = ""
@@ -17,7 +22,7 @@ var PeerUIPort = ""
 var KnownPeers = make(map[string]bool)
 var Keys = make([]string, 0)
 var routingTable = InitRoutingTable()
-var mongeringMessages = make(map[string]map[string][]uint32) // map (ip we monger to) -> (origin of mongered message) -> (ids of mongered messages from origin)
+//var mongeringMessages = make(map[string]map[string][]uint32) // map (ip we monger to) -> (origin of mongered message) -> (ids of mongered messages from origin)
 
 var AntiEntropy = 10
 
@@ -28,6 +33,12 @@ var RTimer = 0
 type FileMemory struct {
 	mu sync.Mutex
 	Files map[string]FileInfo
+}
+
+type Mongering struct {
+	mu sync.Mutex
+	mongeringMessages map[string]map[string][]uint32
+
 }
 
 var debug = false

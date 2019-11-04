@@ -20,7 +20,7 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 		pkt, sender := getAndDecodePacket(gossip)
 
 		AddPeer(sender)
-		fmt.Println("PEERS " + FormatPeers(Keys))
+		//fmt.Println("PEERS " + FormatPeers(Keys))
 
 		if pkt.Rumor != nil {
 			msg := pkt.Rumor
@@ -122,7 +122,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 				sendPacket(newEncoded, randomPeer, peerGossiper)
 				addToMongering(randomPeer, msg.Origin, msg.ID)
 
-				fmt.Println("MONGERING with " + randomPeer)
+				//fmt.Println("MONGERING with " + randomPeer)
 
 				go statusCountDown(msg, randomPeer, peerGossiper)
 			}
@@ -131,7 +131,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 			ReadFileIntoChunks(*file)
 		}
 
-		fmt.Println("PEERS " + FormatPeers(Keys))
+		//fmt.Println("PEERS " + FormatPeers(Keys))
 	}
 
 }
@@ -153,7 +153,9 @@ func statusCountDown(msg RumorMessage, dst string, gossip *Gossiper) {
 	ticker := time.NewTicker(STATUS_COUNTDOWN_TIME * time.Second)
 	<-ticker.C
 
-	mongeredIDs, dstTracked := mongeringMessages[dst][msg.Origin]
+	mongerer.mu.Lock()
+	mongeredIDs, dstTracked := mongerer.mongeringMessages[dst][msg.Origin]
+	mongerer.mu.Unlock()
 
 	if dstTracked {
 		stillMongering := false
@@ -171,7 +173,7 @@ func statusCountDown(msg RumorMessage, dst string, gossip *Gossiper) {
 			sendPacket(encoded, randomPeer, gossip)
 			addToMongering(randomPeer, msg.Origin, msg.ID)
 
-			fmt.Println("MONGERING with " + randomPeer)
+			//fmt.Println("MONGERING with " + randomPeer)
 
 			go statusCountDown(msg, randomPeer, gossip)
 

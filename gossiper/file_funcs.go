@@ -54,6 +54,9 @@ func ReadFileIntoChunks(filename string) {
 
 		fileInfo.orderedHashes[chunkShaString] = i
 		fileInfo.orderedChunks[i] = buf
+		if debug {
+			println("Chunk" + strconv.Itoa(i) + ": " + chunkShaString)
+		}
 	}
 
 	metahash := sha256.Sum256(fileInfo.metafile)
@@ -93,6 +96,11 @@ func searchChunksFor(hash string) ([]byte, bool) {
 }
 
 func handleRequestMessage(msg *DataRequest, gossip *Gossiper) {
+
+	if debug {
+		println("Got request from " + msg.Origin)
+	}
+
 	if msg.Destination == gossip.Name {
 
 		data, _ := getDataFor(msg.HashValue)
@@ -114,90 +122,102 @@ func handleRequestMessage(msg *DataRequest, gossip *Gossiper) {
 
 	} else {
 
-
 		if msg.HopLimit > 0 {
 			msg.HopLimit -= 1
 			newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: msg})
 			printerr("Gossiper Encode Error", err)
 			nextHop := getNextHop(msg.Destination)
 			sendPacket(newEncoded, nextHop, gossip)
+			if debug {
+				println("Passed on")
+			}
 		}
 	}
 
 }
 
 func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
-	if msg.Destination == gossip.Name {
-		//save chunk/metafile and send for next
 
-		fileInfo, meta, here := findFileWithHash(msg.HashValue)
-
-		if here && !fileInfo.downloadComplete {
-
-			if len(msg.Data) == 0 {
-				fileInfo.downloadInterrupted = true
-				putInFileMemory(*fileInfo)
-			} else {
-				shaCheck := sha256.Sum256(msg.Data)
-
-				if helper.Equal(msg.HashValue, fileInfo.hashCurrentlyBeingFetched) && helper.Equal(shaCheck[:], msg.HashValue) {
-
-					if !fileInfo.metafileFetched && meta {
-						fileInfo.metafile = msg.Data
-						fileInfo.metafileFetched = true
-						fileInfo.chunkIndexBeingFetched = 0
-
-						fileInfo.nbChunks = int(math.Ceil(float64(float64(len(msg.Data)) / float64(32))))
-
-					} else {
-						key := hex.EncodeToString(fileInfo.hashCurrentlyBeingFetched)
-						fileInfo.orderedHashes[key] = fileInfo.chunkIndexBeingFetched
-						fileInfo.orderedChunks[fileInfo.chunkIndexBeingFetched] = msg.Data
-
-						fileInfo.filesize += len(msg.Data)
-						fileInfo.chunkIndexBeingFetched += 1
-
-					}
-
-					if fileInfo.chunkIndexBeingFetched >= fileInfo.nbChunks {
-						downloadFile(*fileInfo)
-						fileInfo.downloadComplete = true
-						putInFileMemory(*fileInfo)
-					} else {
-						fmt.Println("DOWNLOADING " + fileInfo.filename + " chunk " + strconv.Itoa(fileInfo.chunkIndexBeingFetched+1) + " from " + msg.Origin)
-						nextChunkHash := fileInfo.metafile[SHA_SIZE*(fileInfo.chunkIndexBeingFetched) : SHA_SIZE*(fileInfo.chunkIndexBeingFetched+1)]
-						fileInfo.hashCurrentlyBeingFetched = nextChunkHash
-
-						newMsg := DataRequest{
-							Origin:      gossip.Name,
-							Destination: msg.Origin,
-							HopLimit:    HOP_LIMIT - 1,
-							HashValue:   nextChunkHash,
-						}
-
-						newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &newMsg})
-						printerr("Gossiper Encode Error", err)
-
-						nextHop := getNextHop(newMsg.Destination)
-						sendPacket(newEncoded, nextHop, gossip)
-
-						putInFileMemory(*fileInfo)
-
-						go downloadCountDown(hex.EncodeToString(msg.HashValue), nextChunkHash, newMsg, gossip)
-					}
-				}
-			}
-			//fileMemory.Files[fileInfo.metahash] = *fileInfo
-		}
-	} else {
-
+	// not mine
+	if msg.Destination != gossip.Name {
 		if msg.HopLimit > 0 {
 			msg.HopLimit -= 1
 			newEncoded, err := protobuf.Encode(&GossipPacket{DataReply: msg})
 			printerr("Gossiper Encode Error", err)
 			nextHop := getNextHop(msg.Destination)
 			sendPacket(newEncoded, nextHop, gossip)
+			return
 		}
+	}
+
+	//mine
+
+	fileInfo, here := checkHashBeingFetched(msg.HashValue) //someone is trying to get this?
+
+	if here && !fileInfo.downloadComplete {
+
+		if len(msg.Data) == 0 { //next chunk not found: download interrupted - stop asking for it
+			fileInfo.downloadInterrupted = true
+			putInFileMemory(*fileInfo)
+			return
+		}
+
+		shaCheck := sha256.Sum256(msg.Data)
+
+		if helper.Equal(shaCheck[:], msg.HashValue) { //check integrity of data
+
+			meta := fileInfo.metahash == hex.EncodeToString(msg.HashValue) //is meta?
+
+			if !fileInfo.metafileFetched && meta { //we want this meta
+				fileInfo.metafile = msg.Data
+				fileInfo.metafileFetched = true
+				fileInfo.chunkIndexBeingFetched = 0
+
+				fileInfo.nbChunks = int(math.Ceil(float64(float64(len(msg.Data)) / float64(32))))
+
+				if fileInfo.nbChunks == 0 { //prevent rounding down in division
+					fileInfo.nbChunks = 1
+				}
+
+			} else {
+				//check not overwriting old reply
+				key := hex.EncodeToString(fileInfo.hashCurrentlyBeingFetched)
+				fileInfo.orderedHashes[key] = fileInfo.chunkIndexBeingFetched
+				fileInfo.orderedChunks[fileInfo.chunkIndexBeingFetched] = msg.Data
+
+				fileInfo.filesize += len(msg.Data)
+				fileInfo.chunkIndexBeingFetched += 1
+
+			}
+
+			if fileInfo.chunkIndexBeingFetched >= fileInfo.nbChunks {
+				downloadFile(*fileInfo)
+				fileInfo.downloadComplete = true
+				putInFileMemory(*fileInfo)
+			} else {
+				fmt.Println("DOWNLOADING " + fileInfo.filename + " chunk " + strconv.Itoa(fileInfo.chunkIndexBeingFetched+1) + " from " + msg.Origin)
+				nextChunkHash := fileInfo.metafile[SHA_SIZE*(fileInfo.chunkIndexBeingFetched) : SHA_SIZE*(fileInfo.chunkIndexBeingFetched+1)]
+				fileInfo.hashCurrentlyBeingFetched = nextChunkHash
+
+				newMsg := DataRequest{
+					Origin:      gossip.Name,
+					Destination: msg.Origin,
+					HopLimit:    HOP_LIMIT - 1,
+					HashValue:   nextChunkHash,
+				}
+
+				newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &newMsg})
+				printerr("Gossiper Encode Error", err)
+
+				nextHop := getNextHop(newMsg.Destination)
+				sendPacket(newEncoded, nextHop, gossip)
+
+				putInFileMemory(*fileInfo)
+
+				go downloadCountDown(hex.EncodeToString(msg.HashValue), nextChunkHash, newMsg, gossip)
+			}
+		}
+		//fileMemory.Files[fileInfo.metahash] = *fileInfo
 	}
 
 }
@@ -266,7 +286,6 @@ func findFileWithHash_unsynched(hash []byte) (*FileInfo, bool, bool) {
 	return fileInfo, isMeta, isValidFile
 }
 
-
 func downloadFile(fileInfo FileInfo) {
 
 	data := make([]byte, 0)
@@ -285,7 +304,6 @@ func downloadFile(fileInfo FileInfo) {
 
 }
 
-
 func downloadCountDown(key string, hash []byte, msg DataRequest, peerGossiper *Gossiper) {
 
 	ticker := time.NewTicker(DOWNLOAD_COUNTDOWN_TIME * time.Second)
@@ -300,7 +318,7 @@ func downloadCountDown(key string, hash []byte, msg DataRequest, peerGossiper *G
 		if isMeta {
 			fmt.Println("DOWNLOADING metafile of " + fileInfo.filename + " from " + msg.Destination)
 		} else {
-			fmt.Println("DOWNLOADING " + fileInfo.filename + " chunk " + strconv.Itoa(fileInfo.chunkIndexBeingFetched+1) + " from " + msg.Origin)
+			fmt.Println("DOWNLOADING " + fileInfo.filename + " chunk " + strconv.Itoa(fileInfo.chunkIndexBeingFetched+1) + " from " + msg.Destination)
 		}
 
 		nextHop := getNextHop(msg.Destination)

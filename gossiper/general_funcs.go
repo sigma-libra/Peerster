@@ -17,7 +17,6 @@ func FormatPeers(peerSlice []string) string {
 }
 
 func getAndDecodePacket(gossip *Gossiper) (GossipPacket, string) {
-
 	packetBytes := make([]byte, PACKET_SIZE)
 	_, sender, err := gossip.conn.ReadFromUDP(packetBytes)
 	printerr("Get and Decode Error", err)
@@ -53,9 +52,11 @@ func AddPeer(peer string) {
 		nodes += peer + "\n"
 	}
 
-	if _, tracked := mongeringMessages[peer]; !tracked {
-		mongeringMessages[peer] = make(map[string][]uint32)
+	mongerer.mu.Lock()
+	if _, tracked := mongerer.mongeringMessages[peer]; !tracked {
+		mongerer.mongeringMessages[peer] = make(map[string][]uint32)
 	}
+	mongerer.mu.Unlock()
 }
 
 
