@@ -1,5 +1,6 @@
 package gossiper
 
+
 import "sync"
 
 //var Files = make(map[string]FileInfo)
@@ -28,4 +29,7 @@ type FileMemory struct {
 	mu sync.Mutex
 	Files map[string]FileInfo
 }
+
+var debug = false
+
 

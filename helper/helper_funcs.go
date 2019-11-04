@@ -20,6 +20,7 @@ func SeparateIPAndPort(address string) (string, string) {
 		println("Helper function Error: expected 2 parts in address, got " + strconv.Itoa(len(elems)) + " instead")
 		return address, ""
 	}
+
 	return elems[0], elems[1]
 }
 

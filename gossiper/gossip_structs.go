@@ -54,14 +54,11 @@ type Gossiper struct {
 
 func NewGossiper(address, name string) *Gossiper {
 	udpAddr, err := net.ResolveUDPAddr("udp4", address)
-	if err != nil {
-		println("Gossiper Error Resolve Address: " + err.Error())
-	}
+	printerr("Gossiper Error Resolve Address", err)
 
 	udpConn, err := net.ListenUDP("udp4", udpAddr)
-	if err != nil {
-		println("Gossiper Error Listen UDP: " + err.Error())
-	}
+
+	printerr("Gossiper Error Listen UDP", err)
 
 	return &Gossiper{
 		address:           udpAddr,

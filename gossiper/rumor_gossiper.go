@@ -63,8 +63,6 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 
 			key := hex.EncodeToString(*request)
 
-			putInFileMemory(InitFileInfo(*file, *request))
-
 			msg := DataRequest{
 				Origin:      name,
 				Destination: *dest,
@@ -73,10 +71,9 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 			}
 
 			newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &msg})
-			if err != nil {
-				println("Gossiper Encode Error: " + err.Error())
-			}
+			printerr("Rumor Gossiper Error", err)
 
+			putInFileMemory(InitFileInfo(*file, *request))
 			nextHop := getNextHop(msg.Destination)
 			sendPacket(newEncoded, nextHop, peerGossiper)
 
@@ -99,9 +96,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 			messages += msg.Origin + " (private): " + msg.Text + "\n"
 
 			newEncoded, err := protobuf.Encode(&GossipPacket{Private: &msg})
-			if err != nil {
-				println("Gossiper Encode Error: " + err.Error())
-			}
+			printerr("Rumor Gossiper Error", err)
 
 			nextHop := getNextHop(msg.Destination)
 			sendPacket(newEncoded, nextHop, peerGossiper)
@@ -120,9 +115,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 			}
 
 			newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &msg})
-			if err != nil {
-				println("Gossiper Encode Error: " + err.Error())
-			}
+			printerr("Rumor Gossiper Error", err)
 
 			if len(KnownPeers) > 0 {
 				randomPeer := Keys[rand.Intn(len(Keys))]
@@ -173,9 +166,7 @@ func statusCountDown(msg RumorMessage, dst string, gossip *Gossiper) {
 
 		if stillMongering && len(Keys) > 0 {
 			encoded, err := protobuf.Encode(&GossipPacket{Rumor: &msg})
-			if err != nil {
-				println("Gossiper Encode Error: " + err.Error())
-			}
+			printerr("Rumor Gossiper Error", err)
 			randomPeer := Keys[rand.Intn(len(Keys))]
 			sendPacket(encoded, randomPeer, gossip)
 			addToMongering(randomPeer, msg.Origin, msg.ID)

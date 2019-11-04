@@ -28,7 +28,7 @@ func HandleSimpleMessagesFrom(gossip *Gossiper, gossipAddr *string) {
 
 		newPacketBytes, err := protobuf.Encode(&GossipPacket{Simple: &newMsg})
 		if err != nil {
-			panic("Gossiper Encode Error: " + err.Error() + "\n")
+			printerr("Simple Gossiper Error", err)
 		}
 
 		for dst, _ := range KnownPeers {
@@ -56,7 +56,7 @@ func HandleSimpleClientMessagesFrom(gossip *Gossiper, gossipAddr *string, peerGo
 
 		newPacketBytes, err := protobuf.Encode(&GossipPacket{Simple: &newMsg})
 		if err != nil {
-			panic("Gossiper Encode Error: " + err.Error() + "\n")
+			printerr("Simple Gossiper Error", err)
 		}
 
 		for dst, _ := range KnownPeers {

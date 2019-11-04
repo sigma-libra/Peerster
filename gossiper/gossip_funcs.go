@@ -44,9 +44,7 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 		randomPeer := Keys[rand.Intn(len(Keys))]
 
 		newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: msg})
-		if err != nil {
-			println("Gossiper Encode Error: " + err.Error())
-		}
+		printerr("Gossiper Encode Error", err)
 		sendPacket(newEncoded, randomPeer, gossip)
 
 		fmt.Println("MONGERING with " + randomPeer)
@@ -143,9 +141,7 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 	if sendMessage {
 		msgToSend := gossip.orderedMessages[smallestOrigin][smallestIDMissing-1]
 		rumorEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &msgToSend})
-		if err != nil {
-			println("Gossiper Encode Error: " + err.Error())
-		}
+		printerr("Gossiper Encode Error", err)
 
 		sendPacket(rumorEncoded, sender, gossip)
 		addToMongering(sender, msgToSend.Origin, msgToSend.ID)
@@ -168,9 +164,7 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 				originalMessage := getMessage(originAcked, idAcked, gossip)
 				randomPeer := Keys[rand.Intn(len(Keys))]
 				newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &originalMessage})
-				if err != nil {
-					println("Gossiper Encode Error: " + err.Error())
-				}
+				printerr("Gossiper Encode Error", err)
 				sendPacket(newEncoded, randomPeer, gossip)
 				addToMongering(randomPeer, originalMessage.Origin, originalMessage.ID)
 				fmt.Println("MONGERING with " + randomPeer)
@@ -228,9 +222,7 @@ func makeStatusPacket(gossip *Gossiper) []byte {
 	}
 	wantPacket := StatusPacket{Want: wants}
 	newEncoded, err := protobuf.Encode(&GossipPacket{Status: &wantPacket})
-	if err != nil {
-		println("Gossiper Encode Error: " + err.Error())
-	}
+	printerr("Gossiper Encode Error", err)
 	return newEncoded
 
 }

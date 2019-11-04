@@ -20,9 +20,7 @@ func getAndDecodePacket(gossip *Gossiper) (GossipPacket, string) {
 
 	packetBytes := make([]byte, PACKET_SIZE)
 	_, sender, err := gossip.conn.ReadFromUDP(packetBytes)
-	if err != nil {
-		print("Gossiper funcs Read Error: " + err.Error() + "\n")
-	}
+	printerr("Get and Decode Error", err)
 
 	pkt := GossipPacket{}
 	protobuf.Decode(packetBytes, &pkt)
@@ -33,9 +31,7 @@ func getAndDecodeFromClient(gossip *Gossiper) Message {
 
 	packetBytes := make([]byte, 1024)
 	_, _, err := gossip.conn.ReadFromUDP(packetBytes)
-	if err != nil {
-		print("Gossiper funcs Read Error: " + err.Error() + "\n")
-	}
+	printerr("Get and Decode Error", err)
 
 	pkt := Message{}
 	protobuf.Decode(packetBytes, &pkt)
@@ -44,13 +40,9 @@ func getAndDecodeFromClient(gossip *Gossiper) Message {
 
 func sendPacket(pkt []byte, dst string, gossip *Gossiper) {
 	udpAddr, err := ResolveUDPAddr("udp4", dst)
-	if err != nil {
-		println("General Funcs Resolve UDP Address Error: " + err.Error())
-	}
+	printerr("Send Error", err)
 	_, err = gossip.conn.WriteToUDP(pkt, udpAddr)
-	if err != nil {
-		println("General Funcs Write to UDP Error: " + err.Error())
-	}
+	printerr("Send Error", err)
 
 }
 
@@ -63,5 +55,12 @@ func AddPeer(peer string) {
 
 	if _, tracked := mongeringMessages[peer]; !tracked {
 		mongeringMessages[peer] = make(map[string][]uint32)
+	}
+}
+
+
+func printerr(errMsg string, err error) {
+	if debug && err != nil {
+		println(errMsg + ": " + err.Error())
 	}
 }

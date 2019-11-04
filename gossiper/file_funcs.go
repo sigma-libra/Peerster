@@ -15,7 +15,7 @@ import (
 func ReadFileIntoChunks(filename string) {
 
 	data, err := ioutil.ReadFile(FILE_FOLDER + filename)
-	checkErr(err)
+	printerr("File func error", err)
 
 	nbChunks := int(math.Ceil(float64(len(data)) / float64(CHUNK_SIZE)))
 
@@ -61,7 +61,9 @@ func ReadFileIntoChunks(filename string) {
 
 	putInFileMemory(fileInfo)
 
-	//println("Metahash: " + fileInfo.metahash)
+	if debug {
+		println("Metahash: " + fileInfo.metahash)
+	}
 }
 
 func putInFileMemory(info FileInfo) {
@@ -98,14 +100,13 @@ func handleRequestMessage(msg *DataRequest, gossip *Gossiper) {
 		reply := DataReply{
 			Origin:      gossip.Name,
 			Destination: msg.Origin,
-			HopLimit:    HOP_LIMIT,
+			HopLimit:    HOP_LIMIT - 1,
 			HashValue:   msg.HashValue,
 			Data:        data,
 		}
 		newEncoded, err := protobuf.Encode(&GossipPacket{DataReply: &reply})
-		if err != nil {
-			println("Gossiper Encode Error: " + err.Error())
-		}
+
+		printerr("Gossiper Encode Error", err)
 
 		nextHop := getNextHop(reply.Destination)
 
@@ -117,9 +118,7 @@ func handleRequestMessage(msg *DataRequest, gossip *Gossiper) {
 		if msg.HopLimit > 0 {
 			msg.HopLimit -= 1
 			newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: msg})
-			if err != nil {
-				println("Gossiper Encode Error: " + err.Error())
-			}
+			printerr("Gossiper Encode Error", err)
 			nextHop := getNextHop(msg.Destination)
 			sendPacket(newEncoded, nextHop, gossip)
 		}
@@ -172,14 +171,12 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 						newMsg := DataRequest{
 							Origin:      gossip.Name,
 							Destination: msg.Origin,
-							HopLimit:    HOP_LIMIT,
+							HopLimit:    HOP_LIMIT - 1,
 							HashValue:   nextChunkHash,
 						}
 
 						newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &newMsg})
-						if err != nil {
-							println("Gossiper Encode Error: " + err.Error())
-						}
+						printerr("Gossiper Encode Error", err)
 
 						nextHop := getNextHop(newMsg.Destination)
 						sendPacket(newEncoded, nextHop, gossip)
@@ -190,16 +187,14 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 					}
 				}
 			}
-			//Files[fileInfo.metahash] = *fileInfo
+			//fileMemory.Files[fileInfo.metahash] = *fileInfo
 		}
 	} else {
 
 		if msg.HopLimit > 0 {
 			msg.HopLimit -= 1
 			newEncoded, err := protobuf.Encode(&GossipPacket{DataReply: msg})
-			if err != nil {
-				println("Gossiper Encode Error: " + err.Error())
-			}
+			printerr("Gossiper Encode Error", err)
 			nextHop := getNextHop(msg.Destination)
 			sendPacket(newEncoded, nextHop, gossip)
 		}
@@ -234,6 +229,15 @@ func checkHashBeingFetched(hash []byte) (*FileInfo, bool) {
 	return nil, false
 }
 
+func checkHashBeingFetched_unsynched(hash []byte) (*FileInfo, bool) {
+	for _, fileInfo := range fileMemory.Files {
+		if helper.Equal(hash, fileInfo.hashCurrentlyBeingFetched) {
+			return &fileInfo, true
+		}
+	}
+	return nil, false
+}
+
 func findFileWithHash(hash []byte) (*FileInfo, bool, bool) {
 	hashString := hex.EncodeToString(hash)
 
@@ -248,6 +252,21 @@ func findFileWithHash(hash []byte) (*FileInfo, bool, bool) {
 	return fileInfo, isMeta, isValidFile
 }
 
+func findFileWithHash_unsynched(hash []byte) (*FileInfo, bool, bool) {
+	hashString := hex.EncodeToString(hash)
+
+	metafileToSend, isMeta := fileMemory.Files[hashString]
+
+	if isMeta {
+		return &metafileToSend, isMeta, true
+	}
+
+	fileInfo, isValidFile := checkHashBeingFetched_unsynched(hash)
+
+	return fileInfo, isMeta, isValidFile
+}
+
+
 func downloadFile(fileInfo FileInfo) {
 
 	data := make([]byte, 0)
@@ -258,7 +277,7 @@ func downloadFile(fileInfo FileInfo) {
 	}
 
 	err := ioutil.WriteFile(DOWNLOAD_FOLDER+fileInfo.filename, data, 0644)
-	checkErr(err)
+	printerr("Download Error", err)
 	//err = ioutil.WriteFile(FILE_FOLDER+fileInfo.filename, data, 0644)
 	//checkErr(err)
 
@@ -266,30 +285,23 @@ func downloadFile(fileInfo FileInfo) {
 
 }
 
-func checkErr(err error) {
-	if err != nil {
-		println("File func error: " + err.Error())
-	}
-}
 
 func downloadCountDown(key string, hash []byte, msg DataRequest, peerGossiper *Gossiper) {
 
 	ticker := time.NewTicker(DOWNLOAD_COUNTDOWN_TIME * time.Second)
 	<-ticker.C
 
-	fileInfo, _, found := findFileWithHash(hash)
-	if found && helper.Equal(fileInfo.hashCurrentlyBeingFetched, hash) && !fileInfo.downloadComplete && !fileInfo.downloadInterrupted {
+	fileInfo, isMeta, found := findFileWithHash(hash)
+	if found && !fileInfo.downloadComplete && !fileInfo.downloadInterrupted {
 
 		newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &msg})
-		if err != nil {
-			println("Gossiper Encode Error: " + err.Error())
-		}
+		printerr("Gossiper Encode Error", err)
 
-		/*if isMeta {
+		if isMeta {
 			fmt.Println("DOWNLOADING metafile of " + fileInfo.filename + " from " + msg.Destination)
 		} else {
 			fmt.Println("DOWNLOADING " + fileInfo.filename + " chunk " + strconv.Itoa(fileInfo.chunkIndexBeingFetched+1) + " from " + msg.Origin)
-		}*/
+		}
 
 		nextHop := getNextHop(msg.Destination)
 		sendPacket(newEncoded, nextHop, peerGossiper)

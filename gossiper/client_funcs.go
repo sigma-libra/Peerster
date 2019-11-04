@@ -22,24 +22,19 @@ func SendClientMessage(msg *string, uiport *string, dest *string, fileHash *[]by
 		Request:     fileHash,
 	}
 	packetToSend, err := protobuf.Encode(&packet)
-	if err != nil {
-		print("Client Encode Error: " + err.Error() + "\n")
-	}
+	printerr("Client Encode Error", err)
 
 	randomPort := "0"
 	clientUdpAddr, err := net.ResolveUDPAddr("udp4", "localhost:"+randomPort)
 	gossiperUdpAddr, err := net.ResolveUDPAddr("udp4", "localhost:"+*uiport)
-	if err != nil {
-		println("Client Resolve Addr Error: " + err.Error())
-	}
-	udpConn, err := net.ListenUDP("udp4", clientUdpAddr)
-	if err != nil {
-		print("Client ListenUDP Error: " + err.Error() + "\n")
-	}
-	_, err = udpConn.WriteToUDP(packetToSend, gossiperUdpAddr)
-	if err != nil {
-		println("Client Write To UDP: " + err.Error())
-	}
+	printerr("Client Resolve Addr Error", err)
 
-	udpConn.Close()
+	udpConn, err := net.ListenUDP("udp4", clientUdpAddr)
+	printerr("Client ListenUDP Error", err)
+
+	_, err = udpConn.WriteToUDP(packetToSend, gossiperUdpAddr)
+	printerr("Client Write To UDP", err)
+
+	err = udpConn.Close()
+	printerr("Client Close connection", err)
 }

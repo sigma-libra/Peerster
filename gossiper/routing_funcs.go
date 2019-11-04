@@ -39,9 +39,7 @@ func makeRouteRumor(gossip *Gossiper) []byte {
 	}
 
 	newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &msg})
-	if err != nil {
-		println("Route Rumor Error: " + err.Error())
-	}
+	printerr("Routing Error", err)
 	return newEncoded
 }
 
@@ -64,9 +62,7 @@ func handlePrivateMessage(msg *PrivateMessage, gossip *Gossiper) {
 		if msg.HopLimit > 0 {
 			msg.HopLimit -= 1
 			newEncoded, err := protobuf.Encode(&GossipPacket{Private: msg})
-			if err != nil {
-				println("Gossiper Encode Error: " + err.Error())
-			}
+			printerr("Routing Error", err)
 			nextHop := getNextHop(msg.Destination)
 			sendPacket(newEncoded, nextHop, gossip)
 		}
