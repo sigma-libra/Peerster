@@ -51,6 +51,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 	//ex6: uiport,dest,file, request
 	//HW1: uiport, msg
 
+	initNode(name, gossip)
 	for {
 
 		clientMessage := getAndDecodeFromClient(gossip)
@@ -109,6 +110,14 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 				ID:     getAndUpdateRumorID(),
 				Text:   text,
 			}
+
+			gossip.mu.Lock()
+			gossip.wantMap[gossip.Name] = PeerStatus{
+				Identifier: gossip.Name,
+				NextID:     msg.ID + 1,
+			}
+			gossip.orderedMessages[gossip.Name] = append(gossip.orderedMessages[gossip.Name], msg)
+			gossip.mu.Unlock();
 
 			if msg.Text != "" {
 				messages += msg.Origin + ": " + msg.Text + "\n"

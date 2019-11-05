@@ -14,14 +14,11 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 	//if msg.Origin != gossip.Name {
 	initNode(msg.Origin, gossip)
 
-	printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.Text
-	fmt.Println(printMsg)
-
 	//update routing table
 	routingTable.mu.Lock()
 	lastID, lastIDExists := routingTable.LastMsgID[msg.Origin]
 
-	if !lastIDExists || lastID < msg.ID {
+	if (!lastIDExists || lastID < msg.ID) && msg.Origin != gossip.Name {
 		routingTable.Table[msg.Origin] = sender
 		routingTable.LastMsgID[msg.Origin] = msg.ID
 
@@ -33,10 +30,13 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 
 	gossip.mu.Lock()
 	defer gossip.mu.Unlock()
-	receivedBefore := (gossip.wantMap[msg.Origin].NextID > msg.ID) || (msg.Origin == gossip.Name)
+	receivedBefore := (gossip.wantMap[msg.Origin].NextID > msg.ID) //|| (msg.Origin == gossip.Name)
 
 	//message not received before: start mongering
 	if !receivedBefore {
+
+		printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.Text
+		fmt.Println(printMsg)
 
 		if msg.Text != "" && (msg.Origin != gossip.Name) {
 			messages += msg.Origin + ": " + msg.Text + "\n"
@@ -65,12 +65,13 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 			gossip.earlyMessages[msg.Origin][(*msg).ID] = *msg
 		}
 
-		//ack reception of packet
-		sendPacket(makeStatusPacket(gossip), sender, gossip)
 		//start countdown to monger to someone else
 		go statusCountDown(*msg, randomPeer, gossip)
 
 	}
+
+	//ack reception of packet
+	sendPacket(makeStatusPacket(gossip), sender, gossip)
 	//}
 }
 
@@ -145,15 +146,15 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 	}
 
 	if sendMessage {
+		gossip.mu.Lock()
 		msgToSend := gossip.orderedMessages[smallestOrigin][smallestIDMissing-1]
+		gossip.mu.Unlock()
 		rumorEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &msgToSend})
 		printerr("Gossiper Encode Error", err)
-
 		sendPacket(rumorEncoded, sender, gossip)
 		addToMongering(sender, msgToSend.Origin, msgToSend.ID)
 		//fmt.Println("MONGERING with " + sender)
 		go statusCountDown(msgToSend, sender, gossip)
-
 	} else if sendStatus {
 		gossip.mu.Lock()
 		sendPacket(makeStatusPacket(gossip), sender, gossip)
@@ -168,7 +169,7 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 		if isAck {
 			coin := rand.Int() % 2
 			heads := coin == 1
-			if heads && len(KnownPeers) > 0 {
+			if heads && len(Keys) > 0 {
 				originalMessage := getMessage(originAcked, idAcked, gossip)
 				randomPeer := Keys[rand.Intn(len(Keys))]
 				newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &originalMessage})

@@ -9,8 +9,8 @@ import (
 )
 
 func getNextHop(dest string) string {
-	routingTable.mu.Lock()
-	defer routingTable.mu.Unlock()
+	routingTable.mu.RLock()
+	defer routingTable.mu.RUnlock()
 	return routingTable.Table[dest]
 }
 
@@ -38,6 +38,14 @@ func makeRouteRumor(gossip *Gossiper) []byte {
 		Text:   "",
 	}
 
+	gossip.mu.Lock()
+	gossip.wantMap[gossip.Name] = PeerStatus{
+		Identifier: gossip.Name,
+		NextID:     msg.ID + 1,
+	}
+	gossip.orderedMessages[gossip.Name] = append(gossip.orderedMessages[gossip.Name], msg)
+	gossip.mu.Unlock();
+
 	newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &msg})
 	printerr("Routing Error", err)
 	return newEncoded
@@ -45,8 +53,8 @@ func makeRouteRumor(gossip *Gossiper) []byte {
 
 func parseRoutingTable() string {
 	origins := ""
-	routingTable.mu.Lock()
-	defer routingTable.mu.Unlock()
+	routingTable.mu.RLock()
+	defer routingTable.mu.RUnlock()
 	for k, _ := range routingTable.Table {
 		origins += "<span onclick='openMessageWindow((this.textContent || this.innerText))'>" + k + "</span>\n"
 	}
