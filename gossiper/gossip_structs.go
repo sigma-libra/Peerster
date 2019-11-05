@@ -2,6 +2,7 @@ package gossiper
 
 import (
 	"net"
+	"sync"
 	"sync/atomic"
 )
 
@@ -44,12 +45,13 @@ type GossipPacket struct {
 }
 
 type Gossiper struct {
-	address           *net.UDPAddr
-	conn              *net.UDPConn
-	Name              string
-	wantMap           map[string]PeerStatus
-	earlyMessages     map[string]map[uint32]RumorMessage
-	orderedMessages   map[string][]RumorMessage
+	address         *net.UDPAddr
+	conn            *net.UDPConn
+	Name            string
+	mu              sync.Mutex
+	wantMap         map[string]PeerStatus
+	earlyMessages   map[string]map[uint32]RumorMessage
+	orderedMessages map[string][]RumorMessage
 }
 
 func NewGossiper(address, name string) *Gossiper {
@@ -61,12 +63,13 @@ func NewGossiper(address, name string) *Gossiper {
 	printerr("Gossiper Error Listen UDP", err)
 
 	return &Gossiper{
-		address:           udpAddr,
-		conn:              udpConn,
-		Name:              name,
-		wantMap:           make(map[string]PeerStatus),
-		earlyMessages:     make(map[string]map[uint32]RumorMessage),
-		orderedMessages:   make(map[string][]RumorMessage),
+		address:         udpAddr,
+		conn:            udpConn,
+		Name:            name,
+		mu:              sync.Mutex{},
+		wantMap:         make(map[string]PeerStatus),
+		earlyMessages:   make(map[string]map[uint32]RumorMessage),
+		orderedMessages: make(map[string][]RumorMessage),
 	}
 }
 

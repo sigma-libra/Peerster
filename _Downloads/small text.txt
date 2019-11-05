@@ -1,9 +1,0 @@
-Dear students,
-
-As specified in the handouts, when you submit the homework, you *must* fill in the online text field, with:
-
-- either one of the three homework 1 reviews you’re building on:​ "Built on review assignment, ID x", where x is0, 1or 2
-
-- or with "Built on own assignment", if you use your own homework 1.
-
-The CS-438 team

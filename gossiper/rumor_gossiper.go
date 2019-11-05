@@ -142,7 +142,9 @@ func FireAntiEntropy(gossip *Gossiper) {
 		<-ticker.C
 		if len(Keys) > 0 {
 			randomPeer := Keys[rand.Intn(len(Keys))]
+			gossip.mu.Lock()
 			sendPacket(makeStatusPacket(gossip), randomPeer, gossip)
+			gossip.mu.Unlock()
 		}
 
 	}
