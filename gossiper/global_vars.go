@@ -41,6 +41,6 @@ type Mongering struct {
 
 }
 
-var debug = true
+var debug = false
 
 

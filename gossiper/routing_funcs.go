@@ -32,13 +32,13 @@ func SendRouteRumor(gossip *Gossiper) {
 }
 
 func makeRouteRumor(gossip *Gossiper) []byte {
+	gossip.mu.Lock()
 	msg := RumorMessage{
 		Origin: gossip.Name,
 		ID:     getAndUpdateRumorID(),
 		Text:   "",
 	}
 
-	gossip.mu.Lock()
 	gossip.wantMap[gossip.Name] = PeerStatus{
 		Identifier: gossip.Name,
 		NextID:     msg.ID + 1,
