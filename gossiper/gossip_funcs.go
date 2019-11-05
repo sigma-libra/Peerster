@@ -35,8 +35,10 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 	//message not received before: start mongering
 	if !receivedBefore {
 
-		printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.Text
-		fmt.Println(printMsg)
+		if msg.Origin != gossip.Name {
+			printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.Text
+			fmt.Println(printMsg)
+		}
 
 		if msg.Text != "" && (msg.Origin != gossip.Name) {
 			messages += msg.Origin + ": " + msg.Text + "\n"
