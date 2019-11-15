@@ -38,16 +38,31 @@
         </form>
     </div>
     <footer>
-        <div><b>File Download</b></div>
-        <div><label for="download_file_from">Download File From: </label><input type="text" id="new_file_from"
-                                                                                style="width:20%;">
+        <p>
+            <span style="margin:5px"><b>File Download</b></span>
+        </p>
+        <div>
+        <span style="margin:5px"><label for="download_file_from">Download File From: </label><input type="text"
+                                                                                                    id="new_file_from"
+                                                                                                    style="width:20%; margin-left: 5px">
             <label for="download_file_hash">Download File Hash: </label><input type="text" id="new_file_hash"
                                                                                style="width:20%;">
             <label for="download_file_name">Download File Name: </label><input type="text" id="new_file_name"
                                                                                style="width:20%;">
 
             <button type="button" onclick="downloadFile()">Download</button>
+        </span>
         </div>
+        <p>
+            <span style="margin:5px"><b>Keywords</b></span>
+
+        <div>
+        <span style="margin:5px"><label for="keywords">Keywords in filenames you want: </label><input
+                    type="text" id="keywords" style="width:20%; margin: 5px">
+            <button type="button" onclick="send_keywords()">Search for keywords</button>
+        </span>
+        </div>
+        </p>
     </footer>
 
 

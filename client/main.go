@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"github.com/SabrinaKall/Peerster/gossiper"
+	"github.com/SabrinaKall/Peerster/server"
 	"os"
 )
 
@@ -16,7 +16,9 @@ func main() {
 	msg := flag.String("msg", "", "message to be sent")
 	dest := flag.String("dest", "", "destination for the private message; ​ can be omitted")
 	request := flag.String("request", "", "request a chunk or metafile of this hash")
-	file := flag.String("file", "", "file to be indexed by the gossiper")
+	file := flag.String("file", "", "file to be indexed by the server")
+	keywords := flag.String("keywords", "", "comma-separated string of keywords for filenames")
+	budget := flag.Int("budget", 2, "initial budget to distribute keywords; can be omitted")
 
 	flag.Parse()
 
@@ -24,6 +26,7 @@ func main() {
 	sendRumorMessage := *msg != ""
 	indexFileLocally := *file != "" && *request == ""           //ex4: uiport, file -> index message locally
 	requestFile := *dest != "" && *file != "" && *request != "" //ex6: uiport,dest,file, request
+	search := *keywords != ""
 
 	if *request != "" {
 		fileHash, err := hex.DecodeString(*request)
@@ -32,13 +35,13 @@ func main() {
 			os.Exit(1)
 		}
 		if requestFile {
-			gossiper.SendClientMessage(msg, uiport, dest, &fileHash, file)
+			server.SendClientMessage(msg, uiport, dest, &fileHash, file)
 			return
 		}
 	}
 
-	if indexFileLocally || sendPrivateMessage || sendRumorMessage {
-		gossiper.SendClientMessage(msg, uiport, dest, nil, file)
+	if indexFileLocally || sendPrivateMessage || sendRumorMessage || search {
+		server.SendClientMessage(msg, uiport, dest, nil, file, keywords, budget)
 	} else {
 		fmt.Println("ERROR (Bad argument combination)")
 		os.Exit(1)
