@@ -1,7 +1,10 @@
 package server
 
 import (
+	"encoding/hex"
+	"fmt"
 	"github.com/dedis/protobuf"
+	"strconv"
 	"time"
 )
 import "strings"
@@ -114,6 +117,7 @@ func SendRepeatedSearchRequests(msg *SearchRequest, gossiper *Gossiper) {
 		msg.Budget = msg.Budget * 2
 
 		if getMatchCounter() >= 2 {
+			fmt.Println("SEARCH FINISHED")
 			break
 		}
 	}
@@ -166,6 +170,12 @@ func handleSearchReply(msg *SearchReply, gossiper *Gossiper) {
 
 	searchReplyTracker.mu.Lock()
 	for _, result := range msg.Results {
+
+		chunkString := ""
+		for _, chunkNb := range result.ChunkMap {
+			chunkString += strconv.FormatUint(chunkNb, 10) + ",";
+		}
+		fmt.Println("FOUND match "+ result.FileName + " at " + msg.Origin + " metafile=" + hex.EncodeToString(result.MetafileHash) + " chunks=" + chunkString[:-1])
 		if result.ChunkCount == uint64(len(result.ChunkMap)) {
 			getAndUpdateMatchCounter()
 			addToMatchingFiles(result.FileName)
