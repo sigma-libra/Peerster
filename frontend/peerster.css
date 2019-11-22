@@ -3,28 +3,42 @@ main {
 }
 
 header, footer {
-    background-color: #BCCE98;
-    height: 150px;
+    background-color: plum;
+    height: 100px;
 
+}
+
+.column {
+    float: left;
+    width: 25%;
 }
 
 
 .nodes {
-    background-color: #F7FDEB;
+    background-color: lavender;
 }
 
-.chat {
-    background-color: #DAE9BC;
+.public_chat {
+    background-color: lavenderblush;
 }
 
-/*button {
-    text-align: center;
-    margin: auto;
-    margin-bottom: 20px;
-    margin-top: 20px;
-    display: block;
-    width: 100px
+.private_chat {
+    background-color: mistyrose;
+}
 
-}*/
+.files {
+    background-color: thistle;
+}
+
+.interactive {
+    background-color: pink;
+}
 
 .hidden{display:none;}
+
+/* Responsive layout - when the screen is less than 600px wide, make the three columns stack on top of each other instead of next to each other */
+@media screen and (max-width: 600px) {
+    .column {
+        width: 100%;
+    }
+}

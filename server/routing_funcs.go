@@ -51,15 +51,7 @@ func makeRouteRumor(gossip *Gossiper) []byte {
 	return newEncoded
 }
 
-func parseRoutingTable() string {
-	origins := ""
-	routingTable.mu.RLock()
-	defer routingTable.mu.RUnlock()
-	for k, _ := range routingTable.Table {
-		origins += "<span onclick='openMessageWindow((this.textContent || this.innerText))'>" + k + "</span>\n"
-	}
-	return origins
-}
+
 
 func handlePrivateMessage(msg *PrivateMessage, gossip *Gossiper) {
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns="http://www.w3.org/1999/html">
 <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
 <script src="peerster.js"></script>
 <head>
@@ -15,55 +15,66 @@
     <script>getmessageableNodes()</script>
 
     <header>
-        <pre id="PeerIdField">Peer ID</pre>
+        <pre id="PeerIdField" style="font-family:georgia,garamond,serif;">Peer ID</pre>
     </header>
-    <div style="width: 30%; float:left">
-        <pre id="PeersField" class="nodes" style="overflow-y: scroll; height:400px;">Nodes:</pre>
+
+    <div class="column">
+        <pre id="PeersField" class="nodes" style="overflow-y: scroll; height:400px;font-family:georgia,garamond,serif;">Nodes:</pre>
         <label for="new_node">New Node : </label><input type="text" id="new_node" style="width:50%;">
         <button type="button" onclick="add_node()">Add Node</button>
     </div>
 
-    <div style="width: 30%; float:right">
-        <pre id="MessagesField" class="chat" style="overflow-y: scroll; height:400px;">Messages:</pre>
+    <div class="column">
+        <pre id="MessagesField" class="public_chat" style="overflow-y: scroll; height:400px;font-family:georgia,garamond,serif;">Messages:</pre>
         <label for="new_message">New Message : </label><input type="text" id="new_message" style="width:50%;">
         <button type="button" onclick="send_message()">Send</button>
     </div>
-    <div style="margin:0 auto;width: 30%;">
-        <pre id="MessageableField" class="chat"
-             style="overflow-y: scroll; height:400px;">Private Messageable Nodes:</pre>
-        <form action="/uploadFile" method="post" enctype="multipart/form-data" target="_blank">
-            <label for="file">Upload File: </label>
-            <input type="file" name="file" id="file"/>
-            <input type="submit" value="Upload"/>
-        </form>
+    <div class="column">
+        <pre id="MessageableField" class="private_chat"
+             style="overflow-y: scroll; height:400px;font-family:georgia,garamond,serif;">Private Messageable Nodes:</pre>
     </div>
-    <footer>
-        <p>
-            <span style="margin:5px"><b>File Download</b></span>
-        </p>
-        <div>
-        <span style="margin:5px"><label for="download_file_from">Download File From: </label><input type="text"
-                                                                                                    id="new_file_from"
-                                                                                                    style="width:20%; margin-left: 5px">
-            <label for="download_file_hash">Download File Hash: </label><input type="text" id="new_file_hash"
-                                                                               style="width:20%;">
-            <label for="download_file_name">Download File Name: </label><input type="text" id="new_file_name"
-                                                                               style="width:20%;">
+    <div class="column">
+        <pre id="FilesField" class="files" style="overflow-y: scroll; height:400px;font-family:georgia,garamond,serif;">Files matching keywords:</pre>
+    </div>
 
-            <button type="button" onclick="downloadFile()">Download</button>
-        </span>
-        </div>
-        <p>
-            <span style="margin:5px"><b>Keywords</b></span>
+    <div style="margin-top: 470px" class="interactive">
+        <p><h><b>Interative: </b></h></p>
+        <ul style="list-style-type:square;">
 
-        <div>
-        <span style="margin:5px"><label for="keywords">Keywords in filenames you want: </label><input
-                    type="text" id="keywords" style="width:20%; margin: 5px">
-            <button type="button" onclick="send_keywords()">Search for keywords</button>
-        </span>
-        </div>
-        </p>
-    </footer>
+            <li><p><b>File Upload</b></p>
+                <form action="/uploadFile" method="post" enctype="multipart/form-data" target="_blank">
+                    <label for="file">Upload File: </label>
+                    <input type="file" name="file" id="file"/>
+                    <input type="submit" value="Upload"/>
+                </form>
+            </li>
+
+            <li><p><b>File Download</b></p>
+                <p>
+                    <label for="new_file_from">Download File From: </label><input type="text"
+                                                                                  id="new_file_from"
+                                                                                  style="width:20%;">
+                    <label for="new_file_hash">Download File Hash: </label><input type="text" id="new_file_hash"
+                                                                                  style="width:20%;">
+                    <label for="new_file_name">Download File Name: </label><input type="text" id="new_file_name"
+                                                                                  style="width:20%;">
+
+                    <button type="button" onclick="downloadFile()">Download</button>
+                </p>
+            </li>
+
+            <li>
+                <p><b>Keywords</b></p>
+                <p>
+                    <label for="keywords">Keywords in filenames you want: </label><input
+                            type="text" id="keywords" style="width:20%; margin: 5px">
+                    <button type="button" onclick="send_keywords()">Search for keywords</button>
+                </p>
+            </li>
+
+
+        </ul>
+    </div>
 
 
 </main>

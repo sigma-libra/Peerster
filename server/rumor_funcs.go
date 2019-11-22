@@ -20,6 +20,7 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 
 	if (!lastIDExists || lastID < msg.ID) && msg.Origin != gossip.Name {
 		routingTable.Table[msg.Origin] = sender
+		addToMessageableNodes(msg.Origin)
 		routingTable.LastMsgID[msg.Origin] = msg.ID
 
 		if msg.Text != "" {

@@ -37,6 +37,12 @@ func HandleRumorMessagesFrom(gossiper *Gossiper) {
 		} else if pkt.DataReply != nil {
 			msg := pkt.DataReply
 			handleReplyMessage(msg, gossiper)
+		} else if pkt.SearchRequest != nil {
+			msg := pkt.SearchRequest
+			handleSearchRequest(msg, gossiper)
+		} else if pkt.SearchReply != nil {
+			msg := pkt.SearchReply
+			handleSearchReply(msg, gossiper)
 		}
 	}
 }
@@ -141,7 +147,12 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 		} else if text == "" && !exists(dest) && exists(file) && request == nil { //hw4 - upload file: !text, !dest, file, !request
 			ReadFileIntoChunks(*file)
 		} else if keywords != nil && len(*keywords) > 0 {
-			SendKeywords(*keywords, *budget)
+				msg := SearchRequest{
+					Origin:   name,
+					Budget:   *budget,
+					Keywords: *keywords,
+				}
+			SendRepeatedSearchRequests(&msg, peerGossiper)
 		}
 
 		//fmt.Println("PEERS " + FormatPeers(Keys))

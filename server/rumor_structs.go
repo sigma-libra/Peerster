@@ -3,7 +3,6 @@ package server
 import (
 	"net"
 	"sync"
-	"sync/atomic"
 )
 
 type RumorMessage struct {
@@ -75,8 +74,3 @@ func NewGossiper(address, name string) *Gossiper {
 	}
 }
 
-func getAndUpdateRumorID() uint32 {
-
-	return atomic.AddUint32(&rumorID, 1)
-
-}

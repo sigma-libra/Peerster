@@ -25,7 +25,7 @@ func main() {
 
 	flag.Parse()
 
-	server.PeerName = *name //for handlertre
+	server.PeerName = *name //for handler
 	server.PeerUIPort = *uiport
 	server.AntiEntropy = *antiEntropy
 	server.RTimer = *rtimer
@@ -67,6 +67,7 @@ func setUpWindow(guiport string) {
 	http.HandleFunc("/nodes", server.GetLatestNodesHandler)
 	http.HandleFunc("/uploadFile", server.GetFileUploadHandler)
 	http.HandleFunc("/download", server.GetFileDownloadHandler)
+	http.HandleFunc("/matchingfiles", server.GetLatestMatchingFilesHandler)
 	for {
 
 		err := http.ListenAndServe( "localhost:" + guiport, nil)

@@ -17,9 +17,10 @@ function send_keywords() {
 
     var keywords = document.getElementById('keywords').value;
 
-    $.post("/keywords", {"keywords": keywords});
+    $.post('/matchingfiles', {"keywords": keywords});
 
 }
+
 
 // Use a named immediately-invoked function expression.
 function getMessages() {
@@ -44,6 +45,14 @@ function getId() {
         var idField = document.getElementById('PeerIdField');
         idField.innerHTML = "Peer ID: \n * Name: " + data.Name + "\n * UIPort: " + data.Port;
         document.title = "Peerster " + data.Name
+    });
+}
+
+function getFilenames() {
+    $.getJSON('/matchingfiles', function (data) {
+        var idField = document.getElementById('FilesField');
+        idField.innerHTML = "Matching Files: \n" + data;
+        setTimeout(getFilenames, 2000);
     });
 }
 
@@ -77,8 +86,12 @@ function downloadFile() {
     var hash = document.getElementById('new_file_hash').value;
     var name = document.getElementById("new_file_name").value;
 
-    $.post("/download", {"dst": dst, "hash": hash, "name": name});
+    $.post("/download", {"byhash": "1", "dst": dst, "hash": hash, "name": name});
 
+}
+
+function downloadSelectedFile(filename) {
+    $.post('/download', {"byhash": "0", "filename": filename})
 }
 
 /*

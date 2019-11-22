@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/SabrinaKall/Peerster/server"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -28,6 +29,12 @@ func main() {
 	requestFile := *dest != "" && *file != "" && *request != "" //ex6: uiport,dest,file, request
 	search := *keywords != ""
 
+	keys := make([]string, 0)
+	if *keywords != "" {
+		keys = strings.Split(*keywords, ",")
+	}
+	budget64 := uint64(*budget)
+
 	if *request != "" {
 		fileHash, err := hex.DecodeString(*request)
 		if err != nil {
@@ -35,13 +42,13 @@ func main() {
 			os.Exit(1)
 		}
 		if requestFile {
-			server.SendClientMessage(msg, uiport, dest, &fileHash, file)
+			server.SendClientMessage(msg, uiport, dest, &fileHash, file, &keys, &budget64)
 			return
 		}
 	}
 
 	if indexFileLocally || sendPrivateMessage || sendRumorMessage || search {
-		server.SendClientMessage(msg, uiport, dest, nil, file, keywords, budget)
+		server.SendClientMessage(msg, uiport, dest, nil, file, &keys, &budget64)
 	} else {
 		fmt.Println("ERROR (Bad argument combination)")
 		os.Exit(1)

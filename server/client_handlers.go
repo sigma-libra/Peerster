@@ -68,8 +68,16 @@ func GetLatestRumorMessagesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 
-func GetLatestKeywordssHandler(w http.ResponseWriter, r *http.Request) {
+func GetLatestMatchingFilesHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
+	case "GET":
+		filesJson, err := json.Marshal(matchingFiles)
+		printerr("Frontend Error", err)
+		// error handling, etc...
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err = w.Write(filesJson)
+		printerr("Frontend Error", err)
 	case "POST":
 		// Call ParseForm() to parse the raw query and update r.PostForm and r.Form.
 		if err := r.ParseForm(); err != nil {
@@ -120,7 +128,7 @@ func GetLatestNodesHandler(w http.ResponseWriter, r *http.Request) {
 func GetLatestMessageableNodesHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		nodesJson, err := json.Marshal(parseRoutingTable())
+		nodesJson, err := json.Marshal(messageableNodes)
 		printerr("Frontend Error", err)
 		// error handling, etc...
 		w.Header().Set("Content-Type", "application/json")
@@ -178,24 +186,40 @@ func GetFileUploadHandler(w http.ResponseWriter, r *http.Request) {
 func GetFileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
+		emptyMsg := ""
 		if err := r.ParseForm(); err != nil {
 			if debug {
 				println(w, "ParseForm() err: %v", err)
 			}
 			return
 		}
-		dst := r.FormValue("dst")
-		hash := r.FormValue("hash")
-		name := r.FormValue("name")
+		byHash := r.FormValue("byhash")
+		if byHash == "1" {
+			dst := r.FormValue("dst")
+			hash := r.FormValue("hash")
+			name := r.FormValue("name")
 
-		if hash != "" {
-			fileHash, err := hex.DecodeString(hash)
-			if err != nil {
-				fmt.Println("​ ERROR (Unable to decode hex hash)")
-				os.Exit(1)
+			if hash != "" {
+				fileHash, err := hex.DecodeString(hash)
+				if err != nil {
+					fmt.Println("​ ERROR (Unable to decode hex hash)")
+					os.Exit(1)
+				}
+				SendClientMessage(&emptyMsg, &PeerUIPort, &dst, &fileHash, &name, nil, nil)
 			}
-			emptyMsg := ""
-			SendClientMessage(&emptyMsg, &PeerUIPort, &dst, &fileHash, &name)
+		} else {
+			filename := r.FormValue("filename")
+
+			searchReplyTracker.mu.Lock();
+			senders := searchReplyTracker.messages[filename]
+			for sender, reply:= range senders {
+				if reply.ChunkCount == uint64(len(reply.ChunkMap)) {
+					hash:= reply.MetafileHash
+					SendClientMessage(&emptyMsg, &PeerUIPort, &sender, &hash, &filename, nil, nil)
+					break;
+				}
+			}
+			searchReplyTracker.mu.Unlock()
 		}
 
 	default:
@@ -205,6 +229,7 @@ func GetFileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 }
+
 
 func writeToFile(filename string, data string) error {
 	file, err := os.Create("./_SharedFiles/" + filename)
