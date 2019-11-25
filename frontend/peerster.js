@@ -49,7 +49,7 @@ function getId() {
 }
 
 function getFilenames() {
-    $.getJSON('/matchingfiles', function (data) {
+    $.getJSON('/matchingfiles', function (data) { //matchingfiles
         var idField = document.getElementById('FilesField');
         idField.innerHTML = "Matching Files: \n" + data;
         setTimeout(getFilenames, 2000);
@@ -91,6 +91,7 @@ function downloadFile() {
 }
 
 function downloadSelectedFile(filename) {
+    window.alert("Downloading "+ filename);
     $.post('/download', {"byhash": "0", "filename": filename})
 }
 

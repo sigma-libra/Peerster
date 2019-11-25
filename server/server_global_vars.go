@@ -69,7 +69,7 @@ type SearchReplyTracking struct {
 	messages map[string]map[string]*SearchResult //filename -> origin -> SearchResult
 }
 
-var debug = false
+var debug = true
 
 
 func getAndUpdateMatchCounter() uint32 {
@@ -94,7 +94,7 @@ func getMatchCounter() uint32 {
 
 
 func addToMessageableNodes(node string) {
-	messageableNodes += "<span onclick='openMessageWindow((this.textContent || this.innerText))'>" + nodes + "</span>\n"
+	messageableNodes += "<span onclick='openMessageWindow((this.textContent || this.innerText))'>" + node + "</span>\n"
 }
 
 func addToMatchingFiles(file string) {

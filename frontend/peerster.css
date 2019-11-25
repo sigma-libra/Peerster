@@ -3,7 +3,7 @@ main {
 }
 
 header, footer {
-    background-color: plum;
+    background-color: #79BAEC;
     height: 100px;
 
 }
@@ -15,23 +15,23 @@ header, footer {
 
 
 .nodes {
-    background-color: lavender;
+    background-color: #F3E5AB;
 }
 
 .public_chat {
-    background-color: lavenderblush;
+    background-color: #FBF6D9;
 }
 
 .private_chat {
-    background-color: mistyrose;
+    background-color: #F3E5AB;
 }
 
 .files {
-    background-color: thistle;
+    background-color: #FBF6D9;
 }
 
 .interactive {
-    background-color: pink;
+    background-color: #79BAEC;
 }
 
 .hidden{display:none;}

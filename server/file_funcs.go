@@ -53,9 +53,6 @@ func ReadFileIntoChunks(filename string) {
 
 		fileInfo.orderedHashes[chunkShaString] = i
 		fileInfo.orderedChunks[i] = buf
-		if debug {
-			println("Chunk" + strconv.Itoa(i) + ": " + chunkShaString)
-		}
 	}
 
 	metahash := sha256.Sum256(fileInfo.metafile)
@@ -216,7 +213,6 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 				go downloadCountDown(hex.EncodeToString(msg.HashValue), nextChunkHash, newMsg, gossip)
 			}
 		}
-		//fileMemory.Files[fileInfo.metahash] = *fileInfo
 	}
 
 }
@@ -248,14 +244,6 @@ func checkHashBeingFetched(hash []byte) (*FileInfo, bool) {
 	return nil, false
 }
 
-func checkHashBeingFetched_unsynched(hash []byte) (*FileInfo, bool) {
-	for _, fileInfo := range fileMemory.Files {
-		if Equal(hash, fileInfo.hashCurrentlyBeingFetched) {
-			return &fileInfo, true
-		}
-	}
-	return nil, false
-}
 
 func findFileWithHash(hash []byte) (*FileInfo, bool, bool) {
 	hashString := hex.EncodeToString(hash)
@@ -271,19 +259,6 @@ func findFileWithHash(hash []byte) (*FileInfo, bool, bool) {
 	return fileInfo, isMeta, isValidFile
 }
 
-func findFileWithHash_unsynched(hash []byte) (*FileInfo, bool, bool) {
-	hashString := hex.EncodeToString(hash)
-
-	metafileToSend, isMeta := fileMemory.Files[hashString]
-
-	if isMeta {
-		return &metafileToSend, isMeta, true
-	}
-
-	fileInfo, isValidFile := checkHashBeingFetched_unsynched(hash)
-
-	return fileInfo, isMeta, isValidFile
-}
 
 func downloadFile(fileInfo FileInfo) {
 

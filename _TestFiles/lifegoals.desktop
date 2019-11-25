@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.2
+Name=lifegoals
+Comment=Goal Tracker
+Exec=/home/sabrina/JavaProjects/lifegoals/lifegoals.sh
+Icon=/home/sabrina/JavaProjects/lifegoals/icon.jpg
+Terminal=false
+Type=Application
+Categories=Utility;Application;

@@ -41,9 +41,11 @@ func handleSearchRequest(msg *SearchRequest, gossiper *Gossiper) {
 				for i := uint64(1); i <= uint64(match.chunkIndexBeingFetched); i++ {
 					chunkMap = append(chunkMap, i)
 				}
+				hash, err := hex.DecodeString(match.metahash)
+				printerr("handle search request, decoding match", err)
 				res := SearchResult{
 					FileName:     match.filename,
-					MetafileHash: match.metafile,
+					MetafileHash: hash,
 					ChunkMap:     chunkMap,
 					ChunkCount:   uint64(match.nbChunks),
 				}
@@ -58,13 +60,17 @@ func handleSearchRequest(msg *SearchRequest, gossiper *Gossiper) {
 				Results:     results,
 			}
 
-			newEncoded, err := protobuf.Encode(&GossipPacket{SearchReply: &reply})
 
-			printerr("Gossiper Encode Error", err)
+			if reply.Destination == gossiper.Name {
+				handleSearchReply(&reply, gossiper)
+			} else {
 
-			nextHop := getNextHop(reply.Destination)
+				newEncoded, err := protobuf.Encode(&GossipPacket{SearchReply: &reply})
+				printerr("Gossiper Encode Error", err)
+				nextHop := getNextHop(reply.Destination)
+				sendPacket(newEncoded, nextHop, gossiper)
+			}
 
-			sendPacket(newEncoded, nextHop, gossiper)
 		}
 
 		msg.Budget -= 1
@@ -110,7 +116,7 @@ func SendRepeatedSearchRequests(msg *SearchRequest, gossiper *Gossiper) {
 
 	for {
 
-		SendSearchRequest(msg, gossiper)
+		handleSearchRequest(msg, gossiper)
 
 		ticker := time.NewTicker(time.Duration(SEARCH_REQUEST_COUNTDOWN_TIME) * time.Second)
 		<-ticker.C
@@ -175,7 +181,7 @@ func handleSearchReply(msg *SearchReply, gossiper *Gossiper) {
 		for _, chunkNb := range result.ChunkMap {
 			chunkString += strconv.FormatUint(chunkNb, 10) + ",";
 		}
-		fmt.Println("FOUND match "+ result.FileName + " at " + msg.Origin + " metafile=" + hex.EncodeToString(result.MetafileHash) + " chunks=" + chunkString[:-1])
+		fmt.Println("FOUND match "+ result.FileName + " at " + msg.Origin + " metafile=" + hex.EncodeToString(result.MetafileHash) + " chunks=" + chunkString[:len(chunkString)-1])
 		if result.ChunkCount == uint64(len(result.ChunkMap)) {
 			getAndUpdateMatchCounter()
 			addToMatchingFiles(result.FileName)
@@ -185,7 +191,7 @@ func handleSearchReply(msg *SearchReply, gossiper *Gossiper) {
 		if !containsOrigin {
 			searchReplyTracker.messages[result.FileName] = make(map[string]*SearchResult)
 		}
-		searchReplyTracker.messages[result.FileName][msg.Origin] =  result
+		searchReplyTracker.messages[result.FileName][msg.Origin] = result
 	}
 
 	searchReplyTracker.mu.Unlock()

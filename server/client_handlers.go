@@ -90,7 +90,8 @@ func GetLatestMatchingFilesHandler(w http.ResponseWriter, r *http.Request) {
 		keywords := strings.Split(newKeywordString, ",")
 		dst := ""
 		budget := uint64(2)
-		SendClientMessage(nil, nil, &dst, nil, nil, &keywords, &budget)
+		emptyMsg := ""
+		SendClientMessage(&emptyMsg, &PeerUIPort, &dst, nil, nil, &keywords, &budget)
 	default:
 		if debug {
 			println(w, "Sorry, only GET and POST methods are supported.")
@@ -215,7 +216,14 @@ func GetFileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 			for sender, reply:= range senders {
 				if reply.ChunkCount == uint64(len(reply.ChunkMap)) {
 					hash:= reply.MetafileHash
-					SendClientMessage(&emptyMsg, &PeerUIPort, &sender, &hash, &filename, nil, nil)
+
+					if sender == PeerName {
+						fileInfo, _, _ := findFileWithHash(hash)
+						downloadFile(*fileInfo)
+
+					} else {
+						SendClientMessage(&emptyMsg, &PeerUIPort, &sender, &hash, &filename, nil, nil)
+					}
 					break;
 				}
 			}
