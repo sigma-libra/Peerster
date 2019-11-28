@@ -29,7 +29,7 @@ func HandleRumorMessagesFrom(gossiper *Gossiper) {
 				Origin:   msg.Origin,
 				ID:       msg.ID,
 				isTLC:    false,
-				rumorMsg: *msg,
+				rumorMsg: msg,
 				tclMsg:   nil,
 			}
 
@@ -60,7 +60,7 @@ func HandleRumorMessagesFrom(gossiper *Gossiper) {
 				ID:       msg.ID,
 				isTLC:    true,
 				rumorMsg: nil,
-				tclMsg:   *msg,
+				tclMsg:   msg,
 			}
 			handleTLCMessage(msg,  gossiper)
 			handleRumorableMessage(&rumorWrapper, sender, gossiper)
@@ -149,7 +149,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 				Origin:   msg.Origin,
 				ID:       msg.ID,
 				isTLC:    false,
-				rumorMsg: msg,
+				rumorMsg: &msg,
 				tclMsg:   nil,
 			}
 
@@ -226,9 +226,9 @@ func statusCountDown(msg RumorableMessage, dst string, gossip *Gossiper) {
 			var encoded []byte
 			var err error
 			if msg.isTLC {
-				encoded, err = protobuf.Encode(&GossipPacket{TLCMessage: &msg.tclMsg})
+				encoded, err = protobuf.Encode(&GossipPacket{TLCMessage: msg.tclMsg})
 			} else {
-				encoded, err = protobuf.Encode(&GossipPacket{Rumor: &msg.rumorMsg})
+				encoded, err = protobuf.Encode(&GossipPacket{Rumor: msg.rumorMsg})
 			}
 			printerr("Rumor Gossiper Error", err)
 			randomPeer := Keys[rand.Intn(len(Keys))]

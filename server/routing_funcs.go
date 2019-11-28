@@ -43,7 +43,14 @@ func makeRouteRumor(gossip *Gossiper) []byte {
 		Identifier: gossip.Name,
 		NextID:     msg.ID + 1,
 	}
-	gossip.orderedMessages[gossip.Name] = append(gossip.orderedMessages[gossip.Name], msg)
+	wrapper := RumorableMessage{
+		Origin:   msg.Origin,
+		ID:       msg.ID,
+		isTLC:    false,
+		rumorMsg: &msg,
+		tclMsg:   nil,
+	}
+	gossip.orderedMessages[gossip.Name] = append(gossip.orderedMessages[gossip.Name], wrapper)
 	gossip.mu.Unlock()
 	newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &msg})
 	printerr("Routing Error", err)
@@ -77,7 +84,7 @@ func handlePrivateMessage(msg *PrivateMessage, gossip *Gossiper) {
 					ID:       newTLCMessage.ID,
 					isTLC:    true,
 					rumorMsg: nil,
-					tclMsg:   newTLCMessage,
+					tclMsg:   &newTLCMessage,
 				}
 				gossip.orderedMessages[gossip.Name] = append(gossip.orderedMessages[gossip.Name], newWrap)
 

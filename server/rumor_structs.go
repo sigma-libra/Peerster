@@ -15,8 +15,8 @@ type RumorableMessage struct {
 	Origin   string
 	ID       uint32
 	isTLC    bool
-	rumorMsg RumorMessage
-	tclMsg   TLCMessage
+	rumorMsg *RumorMessage
+	tclMsg   *TLCMessage
 }
 
 type PeerStatus struct {
@@ -82,6 +82,6 @@ func NewGossiper(address, name string) *Gossiper {
 		wantMap:         make(map[string]PeerStatus),
 		earlyMessages:   make(map[string]map[uint32]RumorableMessage),
 		orderedMessages: make(map[string][]RumorableMessage),
-		tclAcks:         make(map[uint32]string),
+		tclAcks:         make(map[uint32][]string),
 	}
 }

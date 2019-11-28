@@ -10,7 +10,7 @@ import (
 
 func CreateTLCMessage(info FileInfo, gossiper Gossiper) {
 
-	fileMetaHash, err := hex.DecodeString(info.metahash)
+	/*fileMetaHash, err := hex.DecodeString(info.metahash)
 	printerr("BroadcastTCLMessage: metahash string -> []byte", err)
 	tx := TxPublish{
 		Name:         info.filename,
@@ -21,7 +21,7 @@ func CreateTLCMessage(info FileInfo, gossiper Gossiper) {
 	block := BlockPublish{
 		PrevHash:    [32]byte{},
 		Transaction: TxPublish{},
-	}
+	}*/
 
 	gossiper.mu.Lock()
 	msg := TLCMessage{
@@ -42,7 +42,7 @@ func CreateTLCMessage(info FileInfo, gossiper Gossiper) {
 		ID:       msg.ID,
 		isTLC:    true,
 		rumorMsg: nil,
-		tclMsg:   msg,
+		tclMsg:   &msg,
 	}
 
 	gossiper.orderedMessages[gossiper.Name] = append(gossiper.orderedMessages[gossiper.Name], wrapper)

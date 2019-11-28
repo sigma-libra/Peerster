@@ -28,10 +28,12 @@ func main() {
 	antiEntropy := flag.Int("antiEntropy", 10, "Use the given timeout in seconds for anti-entropy. If the flag is absent, the default anti-entropy duration is 10 seconds.")
 	guiport := flag.String("GUIPort", "8080", "Port for the graphical interface")
 	rtimer := flag.Int("rtimer", 0, "Timeout in seconds to send route rumors. 0 (default) means disable sending route rumors.")
-	Hw3Ex2 := flag.Bool("hw3ex2", false, "Whether this is the blockchain exercice");
 	n := flag.Int("N", 1, "the total number of peers in the network, including the current one")
 	stubbornTimeout := flag.Int("stubbornTimeout", 5, "resend time between messages to receive acks")
 	hoplimit := flag.Int("hopLimit", int(server.HOP_LIMIT), "hop limit for private messages")
+
+	//Hw3Ex2 := flag.Bool("hw3ex2", false, "Whether this is the blockchain exercice");
+	//Hw3Ex3 := flag.Bool("hw3ex3", false, "Whether this is the blockchain exercice");
 
 
 	flag.Parse()

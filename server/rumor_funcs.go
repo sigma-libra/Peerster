@@ -60,9 +60,9 @@ func handleRumorableMessage(msg *RumorableMessage, sender string, gossip *Gossip
 		var newEncoded []byte
 		var err error
 		if msg.isTLC {
-			newEncoded, err = protobuf.Encode(&GossipPacket{TLCMessage: &msg.tclMsg})
+			newEncoded, err = protobuf.Encode(&GossipPacket{TLCMessage: msg.tclMsg})
 		} else {
-			newEncoded, err = protobuf.Encode(&GossipPacket{Rumor: &msg.rumorMsg})
+			newEncoded, err = protobuf.Encode(&GossipPacket{Rumor: msg.rumorMsg})
 		}
 		printerr("Gossiper Encode Error", err)
 		sendPacket(newEncoded, randomPeer, gossip)
@@ -170,9 +170,9 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 		var encoded []byte
 		var err error
 		if msgToSend.isTLC {
-			encoded, err = protobuf.Encode(&GossipPacket{TLCMessage: &msgToSend.tclMsg})
+			encoded, err = protobuf.Encode(&GossipPacket{TLCMessage: msgToSend.tclMsg})
 		} else {
-			encoded, err = protobuf.Encode(&GossipPacket{Rumor: &msgToSend.rumorMsg})
+			encoded, err = protobuf.Encode(&GossipPacket{Rumor: msgToSend.rumorMsg})
 		}
 
 		printerr("Gossiper Encode Error", err)
@@ -200,9 +200,9 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 				var encoded []byte
 				var err error
 				if originalMessage.isTLC {
-					encoded, err = protobuf.Encode(&GossipPacket{TLCMessage: &originalMessage.tclMsg})
+					encoded, err = protobuf.Encode(&GossipPacket{TLCMessage: originalMessage.tclMsg})
 				} else {
-					encoded, err = protobuf.Encode(&GossipPacket{Rumor: &originalMessage.rumorMsg})
+					encoded, err = protobuf.Encode(&GossipPacket{Rumor: originalMessage.rumorMsg})
 				}
 
 				printerr("Gossiper Encode Error", err)
