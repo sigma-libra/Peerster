@@ -27,9 +27,9 @@ var searchRequestTracker = SearchRequestTracking{
 	messages: make(map[string]map[string]time.Time),
 }
 
-var searchReplyTracker = SearchReplyTracking{
-	mu:       sync.Mutex{},
-	messages: make(map[string]map[string]*SearchResult),
+var SearchReplyTracker = SearchReplyTracking{
+	Mu:       sync.Mutex{},
+	Messages: make(map[string]map[string]*SearchResult),
 }
 
 var NodeID IDStruct
@@ -74,8 +74,8 @@ type SearchRequestTracking struct {
 }
 
 type SearchReplyTracking struct {
-	mu       sync.Mutex
-	messages map[string]map[string]*SearchResult //filename -> origin -> SearchResult
+	Mu       sync.Mutex
+	Messages map[string]map[string]*SearchResult //filename -> origin -> SearchResult
 }
 
 type TCLAckTracking struct {

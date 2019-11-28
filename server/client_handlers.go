@@ -211,15 +211,15 @@ func GetFileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			filename := r.FormValue("filename")
 
-			searchReplyTracker.mu.Lock();
-			senders := searchReplyTracker.messages[filename]
+			SearchReplyTracker.Mu.Lock();
+			senders := SearchReplyTracker.Messages[filename]
 			for sender, reply:= range senders {
 				if reply.ChunkCount == uint64(len(reply.ChunkMap)) {
 					hash:= reply.MetafileHash
 
 					if sender == PeerName {
-						fileInfo, _, _ := findFileWithHash(hash)
-						downloadFile(*fileInfo)
+						fileInfo, _, _ := FindFileWithHash(hash)
+						DownloadFile(*fileInfo)
 
 					} else {
 						SendClientMessage(&emptyMsg, &PeerUIPort, &sender, &hash, &filename, nil, nil)
@@ -227,7 +227,7 @@ func GetFileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 					break;
 				}
 			}
-			searchReplyTracker.mu.Unlock()
+			SearchReplyTracker.Mu.Unlock()
 		}
 
 	default:

@@ -188,7 +188,7 @@ func handleReplyMessage(msg *DataReply, gossip *Gossiper) {
 			}
 
 			if fileInfo.chunkIndexBeingFetched >= fileInfo.nbChunks {
-				downloadFile(*fileInfo)
+				DownloadFile(*fileInfo)
 				fileInfo.downloadComplete = true
 				putInFileMemory(*fileInfo)
 			} else {
@@ -246,7 +246,7 @@ func checkHashBeingFetched(hash []byte) (*FileInfo, bool) {
 }
 
 
-func findFileWithHash(hash []byte) (*FileInfo, bool, bool) {
+func FindFileWithHash(hash []byte) (*FileInfo, bool, bool) {
 	hashString := hex.EncodeToString(hash)
 
 	metafileToSend, isMeta := getFromFileMemory(hashString)
@@ -261,7 +261,7 @@ func findFileWithHash(hash []byte) (*FileInfo, bool, bool) {
 }
 
 
-func downloadFile(fileInfo FileInfo) {
+func DownloadFile(fileInfo FileInfo) {
 
 	data := make([]byte, 0)
 
@@ -284,7 +284,7 @@ func downloadCountDown(key string, hash []byte, msg DataRequest, peerGossiper *G
 	ticker := time.NewTicker(DOWNLOAD_COUNTDOWN_TIME * time.Second)
 	<-ticker.C
 
-	fileInfo, isMeta, found := findFileWithHash(hash)
+	fileInfo, isMeta, found := FindFileWithHash(hash)
 	if found && !fileInfo.downloadComplete && !fileInfo.downloadInterrupted {
 
 		newEncoded, err := protobuf.Encode(&GossipPacket{DataRequest: &msg})

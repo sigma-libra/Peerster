@@ -27,6 +27,7 @@ func main() {
 	sendRumorMessage := *msg != ""
 	indexFileLocally := *file != "" && *request == ""           //ex4: uiport, file -> index message locally
 	requestFile := *dest != "" && *file != "" && *request != "" //ex6: uiport,dest,file, request
+	requestFoundFile := *dest == "" && *file != "" && *request != ""
 	search := *keywords != ""
 
 	keys := make([]string, 0)
@@ -41,10 +42,11 @@ func main() {
 			fmt.Println("​ ERROR (Unable to decode hex hash)")
 			os.Exit(1)
 		}
-		if requestFile {
+		if requestFile || requestFoundFile {
 			server.SendClientMessage(msg, uiport, dest, &fileHash, file, &keys, &budget64)
 			return
 		}
+
 	}
 
 	if indexFileLocally || sendPrivateMessage || sendRumorMessage || search {
