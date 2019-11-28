@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/dedis/protobuf"
 	"math"
@@ -8,7 +9,7 @@ import (
 	"strconv"
 )
 
-func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
+func handleRumorableMessage(msg *RumorableMessage, sender string, gossip *Gossiper) {
 
 	//TODO TEST THIS
 	//if msg.Origin != gossip.Name {
@@ -25,7 +26,7 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 		}
 		routingTable.LastMsgID[msg.Origin] = msg.ID
 
-		if msg.Text != "" {
+		if ! msg.isTLC && msg.rumorMsg.Text != "" {
 			fmt.Println("DSDV " + msg.Origin + " " + sender)
 		}
 	}
@@ -38,19 +39,31 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 	//message not received before: start mongering
 	if !receivedBefore {
 
-		if msg.Origin != gossip.Name {
-			printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.Text
+		if !msg.isTLC && msg.rumorMsg.Origin != gossip.Name {
+			printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.rumorMsg.Text
 			fmt.Println(printMsg)
 		}
 
-		if msg.Text != "" && (msg.Origin != gossip.Name) {
-			messages += msg.Origin + ": " + msg.Text + "\n"
+		if msg.isTLC && msg.tclMsg.Confirmed == -1 {
+			fmt.Println("UNCONFIRMED GOSSIP origin "+msg.Origin+" ID "+strconv.FormatUint(uint64(msg.ID), 10)+
+				" file name "+msg.tclMsg.TxBlock.Transaction.Name+" size "+strconv.FormatInt(msg.tclMsg.TxBlock.Transaction.Size, 10)+
+				" metahash " + hex.EncodeToString(msg.tclMsg.TxBlock.Transaction.MetafileHash))
+		}
+
+		if! msg.isTLC && msg.rumorMsg.Text != "" && (msg.Origin != gossip.Name) {
+			messages += msg.Origin + ": " + msg.rumorMsg.Text + "\n"
 		}
 
 		//pick random peer to send to
 		randomPeer := Keys[rand.Intn(len(Keys))]
 
-		newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: msg})
+		var newEncoded []byte
+		var err error
+		if msg.isTLC {
+			newEncoded, err = protobuf.Encode(&GossipPacket{TLCMessage: &msg.tclMsg})
+		} else {
+			newEncoded, err = protobuf.Encode(&GossipPacket{Rumor: &msg.rumorMsg})
+		}
 		printerr("Gossiper Encode Error", err)
 		sendPacket(newEncoded, randomPeer, gossip)
 
@@ -154,9 +167,16 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 		gossip.mu.Lock()
 		msgToSend := gossip.orderedMessages[smallestOrigin][smallestIDMissing-1]
 		gossip.mu.Unlock()
-		rumorEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &msgToSend})
+		var encoded []byte
+		var err error
+		if msgToSend.isTLC {
+			encoded, err = protobuf.Encode(&GossipPacket{TLCMessage: &msgToSend.tclMsg})
+		} else {
+			encoded, err = protobuf.Encode(&GossipPacket{Rumor: &msgToSend.rumorMsg})
+		}
+
 		printerr("Gossiper Encode Error", err)
-		sendPacket(rumorEncoded, sender, gossip)
+		sendPacket(encoded, sender, gossip)
 		addToMongering(sender, msgToSend.Origin, msgToSend.ID)
 		//fmt.Println("MONGERING with " + sender)
 		go statusCountDown(msgToSend, sender, gossip)
@@ -177,9 +197,16 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 			if heads && len(Keys) > 0 {
 				originalMessage := getMessage(originAcked, idAcked, gossip)
 				randomPeer := Keys[rand.Intn(len(Keys))]
-				newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &originalMessage})
+				var encoded []byte
+				var err error
+				if originalMessage.isTLC {
+					encoded, err = protobuf.Encode(&GossipPacket{TLCMessage: &originalMessage.tclMsg})
+				} else {
+					encoded, err = protobuf.Encode(&GossipPacket{Rumor: &originalMessage.rumorMsg})
+				}
+
 				printerr("Gossiper Encode Error", err)
-				sendPacket(newEncoded, randomPeer, gossip)
+				sendPacket(encoded, randomPeer, gossip)
 				addToMongering(randomPeer, originalMessage.Origin, originalMessage.ID)
 				//fmt.Println("MONGERING with " + randomPeer)
 				//fmt.Println("FLIPPED COIN sending rumor to " + randomPeer)
@@ -202,17 +229,17 @@ func initNode(name string, gossip *Gossiper) {
 
 	_, listExists := gossip.orderedMessages[name]
 	if !listExists {
-		gossip.orderedMessages[name] = make([]RumorMessage, 0)
+		gossip.orderedMessages[name] = make([]RumorableMessage, 0)
 	}
 
 	_, listExists = gossip.earlyMessages[name]
 	if !listExists {
-		gossip.earlyMessages[name] = make(map[uint32]RumorMessage)
+		gossip.earlyMessages[name] = make(map[uint32]RumorableMessage)
 	}
 
 }
 
-func getMessage(origin string, id uint32, gossip *Gossiper) RumorMessage {
+func getMessage(origin string, id uint32, gossip *Gossiper) RumorableMessage {
 	gossip.mu.Lock()
 	defer gossip.mu.Unlock()
 	isInOrdered := (gossip.wantMap[origin].NextID > id)

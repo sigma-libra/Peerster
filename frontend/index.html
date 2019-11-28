@@ -8,16 +8,21 @@
 
 </head>
 <body>
-<main>
     <script>getMessages()</script>
     <script>getId()</script>
     <script>getNodes()</script>
     <script>getmessageableNodes()</script>
     <script>getFilenames()</script>
 
-    <header>
+    <div class="topbar">
         <pre id="PeerIdField" style="font-family:georgia,garamond,serif;">Peer ID</pre>
-    </header>
+    </div>
+    <div class="topbar">
+        <pre id="BlockchainField" style="font-family:georgia,garamond,serif;">Blockchain</pre>
+        <label for="N">N: </label><input
+                type="text" id="N" style="width:5%; margin: 5px">
+    </div>
+
 
     <div class="column">
         <pre id="PeersField" class="nodes" style="overflow-y: scroll; height:400px;font-family:georgia,garamond,serif;">Nodes:</pre>
@@ -26,7 +31,8 @@
     </div>
 
     <div class="column">
-        <pre id="MessagesField" class="public_chat" style="overflow-y: scroll; height:400px;font-family:georgia,garamond,serif;">Messages:</pre>
+        <pre id="MessagesField" class="public_chat"
+             style="overflow-y: scroll; height:400px;font-family:georgia,garamond,serif;">Messages:</pre>
         <label for="new_message">New Message : </label><input type="text" id="new_message" style="width:50%;">
         <button type="button" onclick="send_message()">Send</button>
     </div>
@@ -38,8 +44,10 @@
         <pre id="FilesField" class="files" style="overflow-y: scroll; height:400px;font-family:georgia,garamond,serif;">Files matching keywords:</pre>
     </div>
 
-    <div style="margin-top: 470px" class="interactive">
-        <p><h><b>Interative: </b></h></p>
+    <div class="interactive">
+        <p>
+            <h><b>Interative: </b></h>
+        </p>
         <ul style="list-style-type:square;">
 
             <li><p><b>File Upload</b></p>
@@ -76,9 +84,6 @@
 
         </ul>
     </div>
-
-
-</main>
 </body>
 </html>
 

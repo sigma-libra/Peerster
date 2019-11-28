@@ -12,6 +12,12 @@ import (
 
 func main() {
 
+	/*
+	./gossiper ​ -gossipAddr=<> -name=<> ​ -peers=<> -antiEntropy=<>
+	-​ hw3ex2=true -N=<> [-stubbornTimeout=<timeout in seconds>]
+	[-hopLimit=<hop limit for TLCAck>]
+	 */
+
 	uiport := flag.String("UIPort",
 		"8080", "port for the UI client (default \"8080\")")
 	gossipAddr := flag.String("gossipAddr",
@@ -22,6 +28,11 @@ func main() {
 	antiEntropy := flag.Int("antiEntropy", 10, "Use the given timeout in seconds for anti-entropy. If the flag is absent, the default anti-entropy duration is 10 seconds.")
 	guiport := flag.String("GUIPort", "8080", "Port for the graphical interface")
 	rtimer := flag.Int("rtimer", 0, "Timeout in seconds to send route rumors. 0 (default) means disable sending route rumors.")
+	Hw3Ex2 := flag.Bool("hw3ex2", false, "Whether this is the blockchain exercice");
+	n := flag.Int("N", 1, "the total number of peers in the network, including the current one")
+	stubbornTimeout := flag.Int("stubbornTimeout", 5, "resend time between messages to receive acks")
+	hoplimit := flag.Int("hopLimit", int(server.HOP_LIMIT), "hop limit for private messages")
+
 
 	flag.Parse()
 
@@ -29,6 +40,10 @@ func main() {
 	server.PeerUIPort = *uiport
 	server.AntiEntropy = *antiEntropy
 	server.RTimer = *rtimer
+	server.N = *n;
+	server.StubbornTimeout = *stubbornTimeout
+	server.Hoplimit = uint32(*hoplimit);
+
 
 	peerGossiper := *server.NewGossiper(*gossipAddr, *name)
 	clientGossiper := *server.NewGossiper("localhost:"+*uiport, *name)

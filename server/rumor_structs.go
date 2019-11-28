@@ -11,6 +11,14 @@ type RumorMessage struct {
 	Text   string
 }
 
+type RumorableMessage struct {
+	Origin   string
+	ID       uint32
+	isTLC    bool
+	rumorMsg RumorMessage
+	tclMsg   TLCMessage
+}
+
 type PeerStatus struct {
 	Identifier string
 	NextID     uint32
@@ -27,11 +35,11 @@ type SimpleMessage struct {
 }
 
 type PrivateMessage struct {
-	Origin      string
-	ID          uint32
-	Text        string
-	Destination string
-	HopLimit    uint32
+	Origin      string //TLC Ack: peer acking the msg
+	ID          uint32 //TLC Ack: the​ same ID as the acked TLCMessage
+	Text        string //TLC Ack: can be empty
+	Destination string //TLC Ack: the source of the acked TLCMessage
+	HopLimit    uint32 //TLC Ack: default 10, otherwise -hopLimit flag
 }
 
 type GossipPacket struct {
@@ -43,6 +51,8 @@ type GossipPacket struct {
 	DataReply     *DataReply
 	SearchRequest *SearchRequest
 	SearchReply   *SearchReply
+	TLCMessage    *TLCMessage
+	Ack           *TLCAck
 }
 
 type Gossiper struct {
@@ -51,8 +61,9 @@ type Gossiper struct {
 	Name            string
 	mu              sync.Mutex
 	wantMap         map[string]PeerStatus
-	earlyMessages   map[string]map[uint32]RumorMessage
-	orderedMessages map[string][]RumorMessage
+	earlyMessages   map[string]map[uint32]RumorableMessage
+	orderedMessages map[string][]RumorableMessage
+	tclAcks         map[uint32][]string
 }
 
 func NewGossiper(address, name string) *Gossiper {
@@ -69,8 +80,8 @@ func NewGossiper(address, name string) *Gossiper {
 		Name:            name,
 		mu:              sync.Mutex{},
 		wantMap:         make(map[string]PeerStatus),
-		earlyMessages:   make(map[string]map[uint32]RumorMessage),
-		orderedMessages: make(map[string][]RumorMessage),
+		earlyMessages:   make(map[string]map[uint32]RumorableMessage),
+		orderedMessages: make(map[string][]RumorableMessage),
+		tclAcks:         make(map[uint32]string),
 	}
 }
-

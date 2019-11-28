@@ -24,7 +24,17 @@ func HandleRumorMessagesFrom(gossiper *Gossiper) {
 
 		if pkt.Rumor != nil {
 			msg := pkt.Rumor
-			handleRumorMessage(msg, sender, gossiper)
+
+			rumorWrapper := RumorableMessage{
+				Origin:   msg.Origin,
+				ID:       msg.ID,
+				isTLC:    false,
+				rumorMsg: *msg,
+				tclMsg:   nil,
+			}
+
+			handleRumorableMessage(&rumorWrapper, sender, gossiper)
+
 		} else if pkt.Status != nil {
 			msg := pkt.Status
 			handleStatusMessage(msg, sender, gossiper)
@@ -43,6 +53,17 @@ func HandleRumorMessagesFrom(gossiper *Gossiper) {
 		} else if pkt.SearchReply != nil {
 			msg := pkt.SearchReply
 			handleSearchReply(msg, gossiper)
+		} else if pkt.TLCMessage != nil {
+			msg := pkt.TLCMessage
+			rumorWrapper := RumorableMessage{
+				Origin:   msg.Origin,
+				ID:       msg.ID,
+				isTLC:    true,
+				rumorMsg: nil,
+				tclMsg:   *msg,
+			}
+			handleTLCMessage(msg,  gossiper)
+			handleRumorableMessage(&rumorWrapper, sender, gossiper)
 		}
 	}
 }
@@ -124,7 +145,15 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 				Identifier: peerGossiper.Name,
 				NextID:     msg.ID + 1,
 			}
-			peerGossiper.orderedMessages[peerGossiper.Name] = append(peerGossiper.orderedMessages[peerGossiper.Name], msg)
+			wrapper := RumorableMessage{
+				Origin:   msg.Origin,
+				ID:       msg.ID,
+				isTLC:    false,
+				rumorMsg: msg,
+				tclMsg:   nil,
+			}
+
+			peerGossiper.orderedMessages[peerGossiper.Name] = append(peerGossiper.orderedMessages[peerGossiper.Name], wrapper)
 			peerGossiper.mu.Unlock();
 
 			if msg.Text != "" {
@@ -141,7 +170,8 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 
 				//fmt.Println("MONGERING with " + randomPeer)
 
-				go statusCountDown(msg, randomPeer, peerGossiper)
+
+				go statusCountDown(wrapper, randomPeer, peerGossiper)
 			}
 
 		} else if text == "" && !exists(dest) && exists(file) && request == nil { //hw4 - upload file: !text, !dest, file, !request
@@ -174,7 +204,7 @@ func FireAntiEntropy(gossip *Gossiper) {
 	}
 }
 
-func statusCountDown(msg RumorMessage, dst string, gossip *Gossiper) {
+func statusCountDown(msg RumorableMessage, dst string, gossip *Gossiper) {
 
 	ticker := time.NewTicker(STATUS_COUNTDOWN_TIME * time.Second)
 	<-ticker.C
@@ -193,7 +223,13 @@ func statusCountDown(msg RumorMessage, dst string, gossip *Gossiper) {
 		}
 
 		if stillMongering && len(Keys) > 0 {
-			encoded, err := protobuf.Encode(&GossipPacket{Rumor: &msg})
+			var encoded []byte
+			var err error
+			if msg.isTLC {
+				encoded, err = protobuf.Encode(&GossipPacket{TLCMessage: &msg.tclMsg})
+			} else {
+				encoded, err = protobuf.Encode(&GossipPacket{Rumor: &msg.rumorMsg})
+			}
 			printerr("Rumor Gossiper Error", err)
 			randomPeer := Keys[rand.Intn(len(Keys))]
 			sendPacket(encoded, randomPeer, gossip)

@@ -1,10 +1,15 @@
-main {
-    width: 100%;
+html {
+
 }
 
-header, footer {
+.topbar {
     background-color: #79BAEC;
+    background-clip: content-box;
+    float: left;
+    width: 49%;
     height: 100px;
+    border: white solid 3px;
+    padding-left: 3px;
 
 }
 

@@ -22,7 +22,7 @@ var searchReqestTracker = SearchRequestTracking{
 	messages: make(map[string]map[string]time.Time),
 }
 
-var searchReplyTracker =SearchReplyTracking{
+var searchReplyTracker = SearchReplyTracking{
 	mu:       sync.Mutex{},
 	messages: make(map[string]map[string]*SearchResult),
 }
@@ -37,6 +37,10 @@ var PeerUIPort = ""
 var KnownPeers = make(map[string]bool)
 var Keys = make([]string, 0)
 var routingTable = InitRoutingTable()
+
+var N = 0
+var StubbornTimeout = 5
+var Hoplimit = HOP_LIMIT
 
 //var mongeringMessages = make(map[string]map[string][]uint32) // map (ip we monger to) -> (origin of mongered message) -> (ids of mongered messages from origin)
 
@@ -65,12 +69,16 @@ type SearchRequestTracking struct {
 }
 
 type SearchReplyTracking struct {
-	mu sync.Mutex
+	mu       sync.Mutex
 	messages map[string]map[string]*SearchResult //filename -> origin -> SearchResult
 }
 
-var debug = true
+type TCLAckTracking struct {
+	mu sync.Mutex
+	acks map[uint32]uint32 //TLCMessage IC -> number of acks collected
+}
 
+var debug = true
 
 func getAndUpdateMatchCounter() uint32 {
 
@@ -91,7 +99,6 @@ func getAndUpdateRumorID() uint32 {
 func getMatchCounter() uint32 {
 	return atomic.LoadUint32(&matchCounter)
 }
-
 
 func addToMessageableNodes(node string) {
 	messageableNodes += "<span onclick='openMessageWindow((this.textContent || this.innerText))'>" + node + "</span>\n"
