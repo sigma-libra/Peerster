@@ -132,7 +132,7 @@ func SendRepeatedSearchRequests(msg *SearchRequest, gossiper *Gossiper) {
 
 func SendSearchRequest(msg *SearchRequest, gossiper *Gossiper) {
 	if msg.Budget < MAX_SEARCH_BUDGET {
-		distribution := divideBudget(msg.Budget, gossiper)
+		distribution := divideBudget(msg.Budget)
 		for peer, budgetForPeer := range distribution {
 			msg.Budget = budgetForPeer
 			newEncoded, err := protobuf.Encode(&GossipPacket{SearchRequest: msg})
@@ -143,16 +143,20 @@ func SendSearchRequest(msg *SearchRequest, gossiper *Gossiper) {
 
 }
 
-func divideBudget(budget uint64, gossiper *Gossiper) map[string]uint64 {
+func divideBudget(budget uint64) map[string]uint64 {
 	distribution := make(map[string]uint64)
 	peers := KnownPeers
 	for k := range peers {
 		distribution[k] = 0
 	}
-	for budget > 0 {
+	distr := uint64(0)
+	for distr < budget {
 		for k := range peers {
 			distribution[k] += 1
-			budget -= 1
+			distr += 1;
+			if distr >= budget {
+				break;
+			}
 		}
 	}
 
