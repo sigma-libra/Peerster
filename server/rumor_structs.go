@@ -56,14 +56,17 @@ type GossipPacket struct {
 }
 
 type Gossiper struct {
-	address         *net.UDPAddr
-	conn            *net.UDPConn
-	Name            string
-	mu              sync.Mutex
-	wantMap         map[string]PeerStatus
-	earlyMessages   map[string]map[uint32]RumorableMessage
-	orderedMessages map[string][]RumorableMessage
-	tclAcks         map[uint32][]string
+	address               *net.UDPAddr
+	conn                  *net.UDPConn
+	Name                  string
+	mu                    sync.Mutex
+	wantMap               map[string]PeerStatus
+	earlyMessages         map[string]map[uint32]RumorableMessage
+	orderedMessages       map[string][]RumorableMessage
+	tclAcks               map[uint32][]string
+	my_time               int
+	tlcSentForCurrentTime bool
+	tlcBuffer             []BlockPublish
 }
 
 func NewGossiper(address, name string) *Gossiper {
@@ -75,13 +78,16 @@ func NewGossiper(address, name string) *Gossiper {
 	printerr("Gossiper Error Listen UDP", err)
 
 	return &Gossiper{
-		address:         udpAddr,
-		conn:            udpConn,
-		Name:            name,
-		mu:              sync.Mutex{},
-		wantMap:         make(map[string]PeerStatus),
-		earlyMessages:   make(map[string]map[uint32]RumorableMessage),
-		orderedMessages: make(map[string][]RumorableMessage),
-		tclAcks:         make(map[uint32][]string),
+		address:               udpAddr,
+		conn:                  udpConn,
+		Name:                  name,
+		mu:                    sync.Mutex{},
+		wantMap:               make(map[string]PeerStatus),
+		earlyMessages:         make(map[string]map[uint32]RumorableMessage),
+		orderedMessages:       make(map[string][]RumorableMessage),
+		tclAcks:               make(map[uint32][]string),
+		my_time:               0,
+		tlcBuffer:             make([]BlockPublish, 0),
+		tlcSentForCurrentTime: false,
 	}
 }

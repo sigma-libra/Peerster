@@ -13,10 +13,10 @@ import (
 func main() {
 
 	/*
-	./gossiper ​ -gossipAddr=<> -name=<> ​ -peers=<> -antiEntropy=<>
-	-​ hw3ex2=true -N=<> [-stubbornTimeout=<timeout in seconds>]
-	[-hopLimit=<hop limit for TLCAck>]
-	 */
+		./gossiper ​ -gossipAddr=<> -name=<> ​ -peers=<> -antiEntropy=<>
+		-​ hw3ex2=true -N=<> [-stubbornTimeout=<timeout in seconds>]
+		[-hopLimit=<hop limit for TLCAck>]
+	*/
 
 	uiport := flag.String("UIPort",
 		"8080", "port for the UI client (default \"8080\")")
@@ -32,23 +32,26 @@ func main() {
 	stubbornTimeout := flag.Int("stubbornTimeout", 5, "resend time between messages to receive acks")
 	hoplimit := flag.Int("hopLimit", int(server.HOP_LIMIT), "hop limit for private messages")
 
-	//Hw3Ex2 := flag.Bool("hw3ex2", false, "Whether this is the blockchain exercice");
-	//Hw3Ex3 := flag.Bool("hw3ex3", false, "Whether this is the blockchain exercice");
-
-
+	Hw3Ex2 := flag.Bool("hw3ex2", false, "Whether this is the blockchain exercice")
+	Hw3Ex3 := flag.Bool("hw3ex3", false, "Whether this is the blockchain exercice")
+	Hw3Ex4 := flag.Bool("hw3ex4", false, "Whether this is the blockchain exercice")
 	flag.Parse()
 
 	server.PeerName = *name //for handler
 	server.PeerUIPort = *uiport
 	server.AntiEntropy = *antiEntropy
 	server.RTimer = *rtimer
-	server.N = *n;
+	server.N = *n
 	server.StubbornTimeout = *stubbornTimeout
-	server.Hoplimit = uint32(*hoplimit);
-
+	server.Hoplimit = uint32(*hoplimit)
+	server.Ex2 = *Hw3Ex2
+	server.Ex3 = *Hw3Ex3
+	server.Ex4 = *Hw3Ex4
 
 	peerGossiper := *server.NewGossiper(*gossipAddr, *name)
 	clientGossiper := *server.NewGossiper("localhost:"+*uiport, *name)
+
+	server.PeerGossiper = &peerGossiper
 
 	knownPeers := make([]string, 0)
 	if *peers != "" {
@@ -87,12 +90,10 @@ func setUpWindow(guiport string) {
 	http.HandleFunc("/matchingfiles", server.GetLatestMatchingFilesHandler)
 	for {
 
-		err := http.ListenAndServe( "localhost:" + guiport, nil)
+		err := http.ListenAndServe("localhost:"+guiport, nil)
 		if err == nil {
 			println("Frontend err: " + err.Error())
 		}
 
 	}
 }
-
-

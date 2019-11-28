@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+var Ex2 bool
+var Ex3 bool
+var Ex4 bool
+
+var PeerGossiper *Gossiper
 //var Files = make(map[string]FileInfo)
 var fileMemory = FileMemory{
 	mu:    sync.Mutex{},

@@ -10,18 +10,19 @@ import (
 
 func CreateTLCMessage(info FileInfo, gossiper Gossiper) {
 
-	/*fileMetaHash, err := hex.DecodeString(info.metahash)
-	printerr("BroadcastTCLMessage: metahash string -> []byte", err)
+	hash, err := hex.DecodeString(info.metahash)
+	printerr("CreateTLCMessage", err)
+
 	tx := TxPublish{
 		Name:         info.filename,
 		Size:         int64(info.filesize),
-		MetafileHash: fileMetaHash,
+		MetafileHash: hash,
 	}
 
 	block := BlockPublish{
 		PrevHash:    [32]byte{},
-		Transaction: TxPublish{},
-	}*/
+		Transaction: tx,
+	}
 
 	gossiper.mu.Lock()
 	msg := TLCMessage{
@@ -48,21 +49,30 @@ func CreateTLCMessage(info FileInfo, gossiper Gossiper) {
 	gossiper.orderedMessages[gossiper.Name] = append(gossiper.orderedMessages[gossiper.Name], wrapper)
 	gossiper.tclAcks[msg.ID] = make([]string, 1)
 	gossiper.tclAcks[msg.ID][0] = gossiper.Name
-	gossiper.mu.Unlock()
 	fmt.Println("UNCONFIRMED GOSSIP origin " + msg.Origin + " ID " + strconv.FormatUint(uint64(msg.ID), 10) +
 		" file name " + msg.TxBlock.Transaction.Name + " size " + strconv.FormatInt(msg.TxBlock.Transaction.Size, 10) +
 		" metahash " + hex.EncodeToString(msg.TxBlock.Transaction.MetafileHash))
 
-	newEncoded, err := protobuf.Encode(&GossipPacket{TLCMessage: &msg})
-	printerr("Rumor Gossiper Error", err)
 
-	if len(KnownPeers) > 0 {
-		randomPeer := Keys[rand.Intn(len(Keys))]
-		sendPacket(newEncoded, randomPeer, &gossiper)
-		addToMongering(randomPeer, msg.Origin, msg.ID)
 
-		go statusCountDown(wrapper, randomPeer, &gossiper)
+	if Ex2 || Ex3 && !gossiper.tlcSentForCurrentTime && len(gossiper.tlcBuffer) == 0 {
+		gossiper.tlcSentForCurrentTime = true;
+		newEncoded, err := protobuf.Encode(&GossipPacket{TLCMessage: &msg})
+		printerr("Rumor Gossiper Error", err)
+
+		if len(KnownPeers) > 0 {
+			randomPeer := Keys[rand.Intn(len(Keys))]
+			sendPacket(newEncoded, randomPeer, &gossiper)
+			addToMongering(randomPeer, msg.Origin, msg.ID)
+
+			go statusCountDown(wrapper, randomPeer, &gossiper)
+		}
+
+	} else {
+		gossiper.tlcBuffer = append(gossiper.tlcBuffer, block)
 	}
+
+	gossiper.mu.Unlock()
 
 }
 

@@ -59,6 +59,7 @@ func ReadFileIntoChunks(filename string) {
 	fileInfo.metahash = hex.EncodeToString(metahash[:])
 
 	putInFileMemory(fileInfo)
+	CreateTLCMessage(fileInfo, *PeerGossiper)
 
 	if debug {
 		println("Metahash: " + fileInfo.metahash)
