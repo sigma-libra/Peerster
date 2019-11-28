@@ -18,17 +18,17 @@ func handleSearchRequest(msg *SearchRequest, gossiper *Gossiper) {
 	origin := msg.Origin
 	keywordString := stringify(msg.Keywords)
 
-	searchReqestTracker.mu.Lock()
-	keywordLists, containsOrigin := searchReqestTracker.messages[origin]
+	searchRequestTracker.mu.Lock()
+	keywordLists, containsOrigin := searchRequestTracker.messages[origin]
 	if containsOrigin {
 		lastTime, containsKeyString := keywordLists[keywordString]
 		duplicate = containsKeyString && timeArrival.Sub(lastTime) < time.Millisecond*500
 	} else {
-		searchReqestTracker.messages[origin] = make(map[string]time.Time)
+		searchRequestTracker.messages[origin] = make(map[string]time.Time)
 	}
-	searchReqestTracker.messages[origin][keywordString] = timeArrival
+	searchRequestTracker.messages[origin][keywordString] = timeArrival
 
-	searchReqestTracker.mu.Unlock()
+	searchRequestTracker.mu.Unlock()
 
 	if !duplicate {
 		//search for keywords
@@ -131,7 +131,7 @@ func SendRepeatedSearchRequests(msg *SearchRequest, gossiper *Gossiper) {
 }
 
 func SendSearchRequest(msg *SearchRequest, gossiper *Gossiper) {
-	if msg.Budget > MAX_SEARCH_BUDGET {
+	if msg.Budget < MAX_SEARCH_BUDGET {
 		distribution := divideBudget(msg.Budget, gossiper)
 		for peer, budgetForPeer := range distribution {
 			msg.Budget = budgetForPeer

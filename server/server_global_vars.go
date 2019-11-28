@@ -22,7 +22,7 @@ var mongerer = Mongering{
 	mongeringMessages: make(map[string]map[string][]uint32),
 }
 
-var searchReqestTracker = SearchRequestTracking{
+var searchRequestTracker = SearchRequestTracking{
 	mu:       sync.RWMutex{},
 	messages: make(map[string]map[string]time.Time),
 }
