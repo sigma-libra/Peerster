@@ -67,6 +67,7 @@ type Gossiper struct {
 	my_time               int
 	tlcSentForCurrentTime bool
 	tlcBuffer             []BlockPublish
+	roundTracker          map[string]int
 }
 
 func NewGossiper(address, name string) *Gossiper {
@@ -89,5 +90,6 @@ func NewGossiper(address, name string) *Gossiper {
 		my_time:               0,
 		tlcBuffer:             make([]BlockPublish, 0),
 		tlcSentForCurrentTime: false,
+		roundTracker:          make(map[string]int),
 	}
 }

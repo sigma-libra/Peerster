@@ -67,7 +67,6 @@ func GetLatestRumorMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
 func GetLatestMatchingFilesHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
@@ -89,7 +88,7 @@ func GetLatestMatchingFilesHandler(w http.ResponseWriter, r *http.Request) {
 		newKeywordString := r.FormValue("keywords")
 		keywords := strings.Split(newKeywordString, ",")
 		dst := ""
-		budget := uint64(2)
+		budget := uint64(0)
 		emptyMsg := ""
 		SendClientMessage(&emptyMsg, &PeerUIPort, &dst, nil, nil, &keywords, &budget)
 	default:
@@ -211,20 +210,13 @@ func GetFileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			filename := r.FormValue("filename")
 
-			SearchReplyTracker.Mu.Lock();
+			SearchReplyTracker.Mu.Lock()
 			senders := SearchReplyTracker.Messages[filename]
-			for sender, reply:= range senders {
+			for sender, reply := range senders {
 				if reply.ChunkCount == uint64(len(reply.ChunkMap)) {
-					hash:= reply.MetafileHash
-
-					if sender == PeerName {
-						fileInfo, _, _ := FindFileWithHash(hash)
-						DownloadFile(*fileInfo)
-
-					} else {
-						SendClientMessage(&emptyMsg, &PeerUIPort, &sender, &hash, &filename, nil, nil)
-					}
-					break;
+					hash := reply.MetafileHash
+					SendClientMessage(&emptyMsg, &PeerUIPort, &sender, &hash, &filename, nil, nil)
+					break
 				}
 			}
 			SearchReplyTracker.Mu.Unlock()
@@ -237,7 +229,6 @@ func GetFileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 }
-
 
 func writeToFile(filename string, data string) error {
 	file, err := os.Create("./_SharedFiles/" + filename)

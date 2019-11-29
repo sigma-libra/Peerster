@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-var Ex2 bool
-var Ex3 bool
+var Simple_File_Share bool
+var Round_based_TLC bool
 var Ex4 bool
 
 var PeerGossiper *Gossiper

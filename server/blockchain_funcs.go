@@ -8,10 +8,9 @@ import (
 	"strconv"
 )
 
-func CreateTLCMessage(info FileInfo, gossiper Gossiper) {
-
+func CreateBlock(info FileInfo) BlockPublish {
 	hash, err := hex.DecodeString(info.metahash)
-	printerr("CreateTLCMessage", err)
+	printerr("HandleBlock", err)
 
 	tx := TxPublish{
 		Name:         info.filename,
@@ -23,13 +22,18 @@ func CreateTLCMessage(info FileInfo, gossiper Gossiper) {
 		PrevHash:    [32]byte{},
 		Transaction: tx,
 	}
+	return block
+}
+
+func HandleBlock(block BlockPublish, gossiper Gossiper) {
 
 	gossiper.mu.Lock()
+	defer gossiper.mu.Unlock()
 	msg := TLCMessage{
 		Origin:      gossiper.Name,
 		ID:          getAndUpdateRumorID(),
 		Confirmed:   -1,
-		TxBlock:     BlockPublish{},
+		TxBlock:     block,
 		VectorClock: nil,
 		Fitness:     0,
 	}
@@ -53,11 +57,10 @@ func CreateTLCMessage(info FileInfo, gossiper Gossiper) {
 		" file name " + msg.TxBlock.Transaction.Name + " size " + strconv.FormatInt(msg.TxBlock.Transaction.Size, 10) +
 		" metahash " + hex.EncodeToString(msg.TxBlock.Transaction.MetafileHash))
 
-
-
-	if Ex2 || Ex3 && !gossiper.tlcSentForCurrentTime && len(gossiper.tlcBuffer) == 0 {
-		gossiper.tlcSentForCurrentTime = true;
-		newEncoded, err := protobuf.Encode(&GossipPacket{TLCMessage: &msg})
+	if Simple_File_Share || Round_based_TLC && !gossiper.tlcSentForCurrentTime && len(gossiper.tlcBuffer) == 0 {
+		gossiper.tlcSentForCurrentTime = true
+		msg := wrapper.tclMsg
+		newEncoded, err := protobuf.Encode(&GossipPacket{TLCMessage: msg})
 		printerr("Rumor Gossiper Error", err)
 
 		if len(KnownPeers) > 0 {
@@ -67,38 +70,36 @@ func CreateTLCMessage(info FileInfo, gossiper Gossiper) {
 
 			go statusCountDown(wrapper, randomPeer, &gossiper)
 		}
-
 	} else {
-		gossiper.tlcBuffer = append(gossiper.tlcBuffer, block)
+		gossiper.tlcBuffer = append(gossiper.tlcBuffer, wrapper.tclMsg.TxBlock)
 	}
-
-	gossiper.mu.Unlock()
 
 }
 
-func handleTLCMessage(msg *TLCMessage, gossiper *Gossiper) {
-	//check if filename is valid
+func MakeTClMessageForBlock(block BlockPublish, gossiper Gossiper) RumorableMessage {
 
-	if msg.Confirmed != -1 {
-		fmt.Println("CONFIRMED GOSSIP origin " + msg.Origin + " ID " + strconv.FormatUint(uint64(msg.ID), 10) +
-			" file name " + msg.TxBlock.Transaction.Name + " size " + strconv.FormatInt(msg.TxBlock.Transaction.Size, 10) +
-			" metahash " + hex.EncodeToString(msg.TxBlock.Transaction.MetafileHash))
-	} else {
-
-		fmt.Println("SENDING ACK origin " + msg.Origin + " ID " + strconv.FormatUint(uint64(msg.ID), 10))
-		//send ack
-		ack := PrivateMessage{
-			Origin:      gossiper.Name,
-			ID:          msg.ID,
-			Text:        "",
-			Destination: msg.Origin,
-			HopLimit:    Hoplimit,
-		}
-
-		newPacketBytes, err := protobuf.Encode(&GossipPacket{Private: &ack})
-		printerr("TLC Message ack protobuf encoding", err)
-
-		sendPacket(newPacketBytes, ack.Destination, gossiper)
+	gossiper.mu.Lock()
+	defer gossiper.mu.Unlock()
+	msg := TLCMessage{
+		Origin:      gossiper.Name,
+		ID:          getAndUpdateRumorID(),
+		Confirmed:   -1,
+		TxBlock:     block,
+		VectorClock: nil,
+		Fitness:     0,
 	}
 
+	gossiper.wantMap[gossiper.Name] = PeerStatus{
+		Identifier: gossiper.Name,
+		NextID:     msg.ID + 1,
+	}
+	wrapper := RumorableMessage{
+		Origin:   msg.Origin,
+		ID:       msg.ID,
+		isTLC:    true,
+		rumorMsg: nil,
+		tclMsg:   &msg,
+	}
+
+	return wrapper
 }

@@ -9,7 +9,24 @@ import (
 	"strconv"
 )
 
-func handleRumorableMessage(msg *RumorableMessage, sender string, gossip *Gossiper) {
+func sendAck(msg TLCMessage, gossiper *Gossiper) {
+	fmt.Println("SENDING ACK origin " + msg.Origin + " ID " + strconv.FormatUint(uint64(msg.ID), 10))
+	//send ack
+	ack := PrivateMessage{
+		Origin:      gossiper.Name,
+		ID:          msg.ID,
+		Text:        "",
+		Destination: msg.Origin,
+		HopLimit:    Hoplimit,
+	}
+
+	newPacketBytes, err := protobuf.Encode(&GossipPacket{Private: &ack})
+	printerr("TLC Message ack protobuf encoding", err)
+
+	sendPacket(newPacketBytes, ack.Destination, gossiper)
+}
+
+func handleRumorableMessage(msg *RumorableMessage, sender string, gossip *Gossiper) bool {
 
 	//TODO TEST THIS
 	//if msg.Origin != gossip.Name {
@@ -39,18 +56,33 @@ func handleRumorableMessage(msg *RumorableMessage, sender string, gossip *Gossip
 	//message not received before: start mongering
 	if !receivedBefore {
 
+		//TODO check validiticy of filenames
+
 		if !msg.isTLC && msg.rumorMsg.Origin != gossip.Name {
 			printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.rumorMsg.Text
 			fmt.Println(printMsg)
 		}
 
 		if msg.isTLC && msg.tclMsg.Confirmed == -1 {
-			fmt.Println("UNCONFIRMED GOSSIP origin "+msg.Origin+" ID "+strconv.FormatUint(uint64(msg.ID), 10)+
-				" file name "+msg.tclMsg.TxBlock.Transaction.Name+" size "+strconv.FormatInt(msg.tclMsg.TxBlock.Transaction.Size, 10)+
+			fmt.Println("UNCONFIRMED GOSSIP origin " + msg.Origin + " ID " + strconv.FormatUint(uint64(msg.ID), 10) +
+				" file name " + msg.tclMsg.TxBlock.Transaction.Name + " size " + strconv.FormatInt(msg.tclMsg.TxBlock.Transaction.Size, 10) +
+				" metahash " + hex.EncodeToString(msg.tclMsg.TxBlock.Transaction.MetafileHash))
+
+			sendAck(*msg.tclMsg, gossip)
+
+			_, trackingOrigin := gossip.roundTracker[msg.Origin]
+			if !trackingOrigin {
+
+			}
+		}
+
+		if msg.isTLC && msg.tclMsg.Confirmed > -1 {
+			fmt.Println("CONFIRMED GOSSIP origin " + msg.Origin + " ID " + strconv.FormatUint(uint64(msg.ID), 10) +
+				" file name " + msg.tclMsg.TxBlock.Transaction.Name + " size " + strconv.FormatInt(msg.tclMsg.TxBlock.Transaction.Size, 10) +
 				" metahash " + hex.EncodeToString(msg.tclMsg.TxBlock.Transaction.MetafileHash))
 		}
 
-		if! msg.isTLC && msg.rumorMsg.Text != "" && (msg.Origin != gossip.Name) {
+		if ! msg.isTLC && msg.rumorMsg.Text != "" && (msg.Origin != gossip.Name) {
 			messages += msg.Origin + ": " + msg.rumorMsg.Text + "\n"
 		}
 
@@ -72,6 +104,32 @@ func handleRumorableMessage(msg *RumorableMessage, sender string, gossip *Gossip
 
 		//if next message we want, save in vector clock
 		if gossip.wantMap[msg.Origin].NextID == msg.ID {
+
+			//check if we can go to next round
+			if msg.isTLC {
+				if _, tracked := gossip.roundTracker[msg.Origin]; !tracked {
+					gossip.roundTracker[msg.Origin] = 0
+				}
+				gossip.roundTracker[msg.Origin]+=1
+
+				if len(gossip.tlcBuffer) > 0 && gossip.tlcSentForCurrentTime {
+					nbAboveRound := 0
+					for _, round := range gossip.roundTracker {
+						if round >= gossip.my_time {
+							nbAboveRound += 1
+						}
+					}
+					if nbAboveRound >= (N/2) + 1 || gossip.my_time == 0 {
+						gossip.my_time += 1
+						gossip.tlcSentForCurrentTime = false
+						nextBlock := gossip.tlcBuffer[0]
+						gossip.tlcBuffer = gossip.tlcBuffer[1:]
+
+						HandleBlock(nextBlock, *gossip)
+
+					}
+				}
+			}
 			gossip.wantMap[msg.Origin] = PeerStatus{
 				Identifier: msg.Origin,
 				NextID:     msg.ID + 1,
@@ -91,6 +149,7 @@ func handleRumorableMessage(msg *RumorableMessage, sender string, gossip *Gossip
 	//ack reception of packet
 	sendPacket(makeStatusPacket(gossip), sender, gossip)
 	//}
+	return receivedBefore
 }
 
 func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {

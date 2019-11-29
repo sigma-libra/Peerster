@@ -8,7 +8,7 @@ import (
 func HandleSimpleMessagesFrom(gossip *Gossiper, gossipAddr *string) {
 	for {
 
-		pkt, _ := getAndDecodePacket(gossip)
+		pkt, _ , _:= getAndDecodePacket(gossip)
 		msg := pkt.Simple
 		newOriginalName := msg.OriginalName
 		newRelayPeerAddr := msg.RelayPeerAddr

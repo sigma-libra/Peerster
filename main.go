@@ -44,8 +44,8 @@ func main() {
 	server.N = *n
 	server.StubbornTimeout = *stubbornTimeout
 	server.Hoplimit = uint32(*hoplimit)
-	server.Ex2 = *Hw3Ex2
-	server.Ex3 = *Hw3Ex3
+	server.Simple_File_Share = *Hw3Ex2
+	server.Round_based_TLC = *Hw3Ex3
 	server.Ex4 = *Hw3Ex4
 
 	peerGossiper := *server.NewGossiper(*gossipAddr, *name)

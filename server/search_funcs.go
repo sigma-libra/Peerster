@@ -4,79 +4,84 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/dedis/protobuf"
-	"sort"
 	"strconv"
 	"time"
 )
 import "strings"
 
-func handleSearchRequest(msg *SearchRequest, gossiper *Gossiper) {
+func handleSearchRequest(msg *SearchRequest, gossiper *Gossiper, timeArrival time.Time, reduceBudget bool) {
 
-	//check if duplicate
-
-	timeArrival := time.Now()
+	if debug {
+		fmt.Println("Got search request")
+	}
 	origin := msg.Origin
-	sort.Strings(msg.Keywords)
 	keywordString := stringify(msg.Keywords)
 
-	searchRequestTracker.mu.Lock()
-	keywordLists, containsOrigin := searchRequestTracker.messages[origin]
-	if containsOrigin {
-		lastTime, containsKeyString := keywordLists[keywordString]
-		duplicate := containsKeyString && timeArrival.Sub(lastTime) <= time.Millisecond*500
-		if duplicate {
-			searchRequestTracker.mu.Unlock()
-			return
-		}
-	} else {
-		searchRequestTracker.messages[origin] = make(map[string]time.Time)
-	}
+	if origin != gossiper.Name {
 
-	searchRequestTracker.messages[origin][keywordString] = timeArrival
-	searchRequestTracker.mu.Unlock()
+		//check if duplicate
+		searchRequestTracker.mu.Lock()
+		keywordLists, containsOrigin := searchRequestTracker.messages[origin]
 
-	//search for keywords
-	matches := SearchForKeywords(msg.Keywords)
-	//handle matches
-	if len(matches) > 0 {
-		results := make([]*SearchResult, 0)
-		for _, match := range matches {
-			chunkMap := make([]uint64, 0)
-			for i := uint64(1); i <= uint64(match.chunkIndexBeingFetched); i++ {
-				chunkMap = append(chunkMap, i)
-			}
-			hash, err := hex.DecodeString(match.metahash)
-			printerr("handle search request, decoding match", err)
-			res := SearchResult{
-				FileName:     match.filename,
-				MetafileHash: hash,
-				ChunkMap:     chunkMap,
-				ChunkCount:   uint64(match.nbChunks),
-			}
-
-			results = append(results, &res)
-		}
-
-		reply := SearchReply{
-			Origin:      gossiper.Name,
-			Destination: msg.Origin,
-			HopLimit:    HOP_LIMIT - 1,
-			Results:     results,
-		}
-
-		if reply.Destination == gossiper.Name {
-			handleSearchReply(&reply, gossiper)
+		if !containsOrigin {
+			searchRequestTracker.messages[origin] = make(map[string]time.Time)
 		} else {
+			lastTime, containsKeyString := keywordLists[keywordString]
+			if containsKeyString {
+				diff := timeArrival.Sub(lastTime).Seconds()
+				if diff <= 0.5 {
+					searchRequestTracker.mu.Unlock()
+					if debug {
+						fmt.Println("Too soon - dropping search request")
+					}
+					return
+				}
+			}
+		}
+
+		searchRequestTracker.messages[origin][keywordString] = timeArrival
+		searchRequestTracker.mu.Unlock()
+
+		//search for keywords
+		matches := SearchForKeywords(msg.Keywords)
+		//handle matches
+		if len(matches) > 0 {
+			results := make([]*SearchResult, 0)
+			for _, match := range matches {
+				chunkMap := make([]uint64, 0)
+				for i := uint64(1); i <= uint64(match.chunkIndexBeingFetched); i++ {
+					chunkMap = append(chunkMap, i)
+				}
+				hash, err := hex.DecodeString(match.metahash)
+				printerr("handle search request, decoding match", err)
+				res := SearchResult{
+					FileName:     match.filename,
+					MetafileHash: hash,
+					ChunkMap:     chunkMap,
+					ChunkCount:   uint64(match.nbChunks),
+				}
+
+				results = append(results, &res)
+			}
+
+			reply := SearchReply{
+				Origin:      gossiper.Name,
+				Destination: msg.Origin,
+				HopLimit:    HOP_LIMIT - 1,
+				Results:     results,
+			}
 
 			newEncoded, err := protobuf.Encode(&GossipPacket{SearchReply: &reply})
 			printerr("Gossiper Encode Error", err)
 			nextHop := getNextHop(reply.Destination)
 			sendPacket(newEncoded, nextHop, gossiper)
-		}
 
+		}
 	}
 
-	msg.Budget -= 1
+	if reduceBudget {
+		msg.Budget -= 1
+	}
 	SendSearchRequest(msg, gossiper)
 }
 
@@ -97,6 +102,9 @@ func SearchForKeywords(keywords []string) []FileInfo {
 	for _, file := range fileMemory.Files {
 		for _, keyword := range keywords {
 			if strings.Contains(file.filename, keyword) {
+				if debug {
+					fmt.Println("Found match: " + keyword + " -> " + file.filename)
+				}
 				matches = append(matches, file)
 				break
 			}
@@ -105,7 +113,7 @@ func SearchForKeywords(keywords []string) []FileInfo {
 	return matches
 }
 
-func SendRepeatedSearchRequests(msg *SearchRequest, gossiper *Gossiper) {
+func SendRepeatedSearchRequests(msg *SearchRequest, gossiper *Gossiper, increasingBudget bool) {
 	/*
 		Then, the node
 		subtracts 1 from the incoming request's budget, then only if the budget B is still greater than
@@ -116,15 +124,31 @@ func SendRepeatedSearchRequests(msg *SearchRequest, gossiper *Gossiper) {
 
 	restartMatchCounter()
 
+	firstTime := true
+
 	for {
 
-		handleSearchRequest(msg, gossiper)
+		if debug {
+			fmt.Println("Looping repeated search requests: budget: ")
+		}
+		handleSearchRequest(msg, gossiper, time.Now(), firstTime)
 
+		firstTime = false;
 		ticker := time.NewTicker(time.Duration(SEARCH_REQUEST_COUNTDOWN_TIME) * time.Second)
 		<-ticker.C
 
-		msg.Budget = msg.Budget * 2
-		if msg.Budget >= MAX_SEARCH_BUDGET || getMatchCounter() >= MATCH_THRESHOLD {
+		if increasingBudget {
+			msg.Budget = msg.Budget * 2
+			if debug {
+				fmt.Println("Searching with budget: " + strconv.FormatUint(msg.Budget, 10))
+			}
+
+		}
+		if msg.Budget > MAX_SEARCH_BUDGET || getMatchCounter() >= MATCH_THRESHOLD {
+			if debug {
+				fmt.Println("Done repeating search with budget: " + strconv.FormatUint(msg.Budget, 10) +
+					" / matches: " + strconv.FormatUint(uint64(getMatchCounter()), 10))
+			}
 			break
 		}
 
@@ -136,6 +160,9 @@ func SendSearchRequest(msg *SearchRequest, gossiper *Gossiper) {
 	distribution := divideBudget(msg.Budget)
 	for peer, budgetForPeer := range distribution {
 		if budgetForPeer > 0 {
+			if debug {
+				fmt.Println("Send search request to " + peer)
+			}
 			msg.Budget = budgetForPeer
 			newEncoded, err := protobuf.Encode(&GossipPacket{SearchRequest: msg})
 			printerr("Rumor Gossiper Error", err)
@@ -179,7 +206,7 @@ func handleSearchReply(msg *SearchReply, gossiper *Gossiper) {
 		}
 	}
 
-	matchedNames := make(map[string]bool)
+	//matchedNames := make(map[string]bool)
 	SearchReplyTracker.Mu.Lock()
 	for _, result := range msg.Results {
 
@@ -194,11 +221,11 @@ func handleSearchReply(msg *SearchReply, gossiper *Gossiper) {
 		}
 		SearchReplyTracker.Messages[result.FileName][msg.Origin] = result
 
-		_, alreadyMatched := matchedNames[result.FileName]
+		//_, alreadyMatched := matchedNames[result.FileName]
 
-		if result.ChunkCount == uint64(len(result.ChunkMap)) && !alreadyMatched {
+		if result.ChunkCount == uint64(len(result.ChunkMap)) { //&& !alreadyMatched {
 			addToMatchingFiles(result.FileName)
-			matchedNames[result.FileName] = true
+			//matchedNames[result.FileName] = true
 			nbMatches := getAndUpdateMatchCounter()
 			if nbMatches >= MATCH_THRESHOLD {
 				fmt.Println("SEARCH FINISHED")
@@ -206,19 +233,6 @@ func handleSearchReply(msg *SearchReply, gossiper *Gossiper) {
 			}
 		}
 	}
-
-	/*for filename := range matchedNames {
-
-		senders := searchReplyTracker.messages[filename]
-		for _, reply := range senders {
-			if reply.ChunkCount == uint64(len(reply.ChunkMap)) {
-				hash := reply.MetafileHash
-				fileInfo, _, _ := findFileWithHash(hash)
-				downloadFile(*fileInfo)
-				break
-			}
-		}
-	}*/
 	SearchReplyTracker.Mu.Unlock()
 
 }

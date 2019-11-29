@@ -19,7 +19,7 @@ func main() {
 	request := flag.String("request", "", "request a chunk or metafile of this hash")
 	file := flag.String("file", "", "file to be indexed by the server")
 	keywords := flag.String("keywords", "", "comma-separated string of keywords for filenames")
-	budget := flag.Int("budget", 2, "initial budget to distribute keywords; can be omitted")
+	budget := flag.Int("budget", 0, "initial budget to distribute keywords; can be omitted")
 
 	flag.Parse()
 
@@ -34,6 +34,7 @@ func main() {
 	if *keywords != "" {
 		keys = strings.Split(*keywords, ",")
 	}
+
 	budget64 := uint64(*budget)
 
 	if *request != "" {

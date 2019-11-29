@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/dedis/protobuf"
 	"math/rand"
-	"sort"
 	"time"
 )
 
@@ -18,7 +17,7 @@ func HandleRumorMessagesFrom(gossiper *Gossiper) {
 
 	for {
 
-		pkt, sender := getAndDecodePacket(gossiper)
+		pkt, sender, arrivalTime := getAndDecodePacket(gossiper)
 
 		AddPeer(sender)
 		//fmt.Println("PEERS " + FormatPeers(Keys))
@@ -50,7 +49,7 @@ func HandleRumorMessagesFrom(gossiper *Gossiper) {
 			handleReplyMessage(msg, gossiper)
 		} else if pkt.SearchRequest != nil {
 			msg := pkt.SearchRequest
-			handleSearchRequest(msg, gossiper)
+			handleSearchRequest(msg, gossiper, arrivalTime, true)
 		} else if pkt.SearchReply != nil {
 			msg := pkt.SearchReply
 			handleSearchReply(msg, gossiper)
@@ -63,7 +62,6 @@ func HandleRumorMessagesFrom(gossiper *Gossiper) {
 				rumorMsg: nil,
 				tclMsg:   msg,
 			}
-			handleTLCMessage(msg, gossiper)
 			handleRumorableMessage(&rumorWrapper, sender, gossiper)
 		}
 	}
@@ -90,7 +88,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 		keywords := clientMessage.Keywords
 		budget := clientMessage.Budget
 
-		if text == "" && exists(file) && request != nil { //ex6: !text, dest, file, request
+		if text == "" && exists(file) && request != nil { //ex6: !text, dest, file, request -> get file from dest with hash
 
 			var fileOwner string
 			if !exists(dest) {
@@ -128,7 +126,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 
 			go downloadCountDown(key, *request, msg, peerGossiper)
 
-		} else if text != "" && exists(dest) && !exists(file) && request == nil { //case ex3: text, dest, !file, !request
+		} else if text != "" && exists(dest) && !exists(file) && request == nil { //case ex3: text, dest, !file, !request -> send private message
 			//CLIENT MESSAGE <msg_text> dest <dst_name>
 			fmt.Println("CLIENT MESSAGE " + text + " dest " + *dest)
 
@@ -148,7 +146,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 			nextHop := getNextHop(msg.Destination)
 			sendPacket(newEncoded, nextHop, peerGossiper)
 
-		} else if text != "" && !exists(dest) && !exists(file) && request == nil { //HW1 rumor message: //text, !dest, !file, !request
+		} else if text != "" && !exists(dest) && !exists(file) && request == nil { //HW1 rumor message: //text, !dest, !file, !request -> send public message
 			fmt.Println("CLIENT MESSAGE " + text)
 
 			peerGossiper.mu.Lock()
@@ -189,20 +187,33 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 				go statusCountDown(wrapper, randomPeer, peerGossiper)
 			}
 
-		} else if text == "" && !exists(dest) && exists(file) && request == nil { //hw4 - upload file: !text, !dest, file, !request
+		} else if text == "" && !exists(dest) && exists(file) && request == nil { //hw4 - upload file: !text, !dest, file, !request -> upload file
 			ReadFileIntoChunks(*file)
+			if Simple_File_Share {
+				// send TLC informing of new block
+			}
+
+			if Round_based_TLC {
+				//
+
+			}
 		} else if keywords != nil && len(*keywords) > 0 { //keyword
-			sort.Strings(*keywords)
+
+		var increasingBudget bool
+			if *budget == 0 {
+				*budget = 2
+				increasingBudget = true
+			} else {
+				increasingBudget = false
+			}
 
 			msg := SearchRequest{
 				Origin:   name,
 				Budget:   *budget,
 				Keywords: *keywords,
 			}
-			SendRepeatedSearchRequests(&msg, peerGossiper)
+			go SendRepeatedSearchRequests(&msg, peerGossiper, increasingBudget)
 		}
-
-		//fmt.Println("PEERS " + FormatPeers(Keys))
 	}
 
 }

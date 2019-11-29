@@ -3,6 +3,7 @@ package server
 import (
 	"github.com/dedis/protobuf"
 	. "net"
+	"time"
 )
 
 func FormatPeers(peerSlice []string) string {
@@ -16,14 +17,15 @@ func FormatPeers(peerSlice []string) string {
 	return peers
 }
 
-func getAndDecodePacket(gossip *Gossiper) (GossipPacket, string) {
+func getAndDecodePacket(gossip *Gossiper) (GossipPacket, string, time.Time) {
 	packetBytes := make([]byte, PACKET_SIZE)
 	_, sender, err := gossip.conn.ReadFromUDP(packetBytes)
 	printerr("Get and Decode Error", err)
+	arrivalTime := time.Now()
 
 	pkt := GossipPacket{}
 	protobuf.Decode(packetBytes, &pkt)
-	return pkt, sender.String()
+	return pkt, sender.String(), arrivalTime
 }
 
 func getAndDecodeFromClient(gossip *Gossiper) Message {
