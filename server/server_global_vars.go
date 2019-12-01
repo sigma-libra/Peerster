@@ -9,6 +9,7 @@ import (
 var Simple_File_Share bool
 var Round_based_TLC bool
 var Ex4 bool
+var AckAll bool
 
 var PeerGossiper *Gossiper
 //var Files = make(map[string]FileInfo)
@@ -35,6 +36,8 @@ var SearchReplyTracker = SearchReplyTracking{
 var NodeID IDStruct
 var messages = ""
 var nodes = ""
+var confirmed = ""
+var rounds = ""
 var matchingFiles = ""
 var messageableNodes = ""
 var PeerName = ""
@@ -43,7 +46,7 @@ var KnownPeers = make(map[string]bool)
 var Keys = make([]string, 0)
 var routingTable = InitRoutingTable()
 
-var N = 0
+var N = 3
 var StubbornTimeout = 5
 var Hoplimit = HOP_LIMIT
 
@@ -85,14 +88,18 @@ type TCLAckTracking struct {
 
 var debug = true
 
-func getAndUpdateMatchCounter() uint32 {
+func updateAndGetMatchCounter() uint32 {
 
 	return atomic.AddUint32(&matchCounter, 1)
 
 }
 
-func restartMatchCounter() {
+func restartMatchCounter(gossiper Gossiper) {
 	atomic.StoreUint32(&matchCounter, 0)
+	gossiper.mu.Lock()
+	gossiper.lastMatch = make(map[string]map[string]bool)
+	gossiper.mu.Unlock()
+
 }
 
 func getAndUpdateRumorID() uint32 {

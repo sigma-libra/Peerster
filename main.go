@@ -31,6 +31,7 @@ func main() {
 	n := flag.Int("N", 1, "the total number of peers in the network, including the current one")
 	stubbornTimeout := flag.Int("stubbornTimeout", 5, "resend time between messages to receive acks")
 	hoplimit := flag.Int("hopLimit", int(server.HOP_LIMIT), "hop limit for private messages")
+	ackAll := flag.Bool("ackAll", true, "whether we ack all messages irrespective of ID")
 
 	Hw3Ex2 := flag.Bool("hw3ex2", false, "Whether this is the blockchain exercice")
 	Hw3Ex3 := flag.Bool("hw3ex3", false, "Whether this is the blockchain exercice")
@@ -47,6 +48,7 @@ func main() {
 	server.Simple_File_Share = *Hw3Ex2
 	server.Round_based_TLC = *Hw3Ex3
 	server.Ex4 = *Hw3Ex4
+	server.AckAll = *ackAll
 
 	peerGossiper := *server.NewGossiper(*gossipAddr, *name)
 	clientGossiper := *server.NewGossiper("localhost:"+*uiport, *name)
@@ -88,6 +90,9 @@ func setUpWindow(guiport string) {
 	http.HandleFunc("/uploadFile", server.GetFileUploadHandler)
 	http.HandleFunc("/download", server.GetFileDownloadHandler)
 	http.HandleFunc("/matchingfiles", server.GetLatestMatchingFilesHandler)
+	http.HandleFunc("/confirmed", server.GetConfirmedRumorMessages)
+	http.HandleFunc("/rounds", server.GetRounds)
+
 	for {
 
 		err := http.ListenAndServe("localhost:"+guiport, nil)

@@ -2,7 +2,7 @@ html {
 
 }
 
-.topbar {
+/*.topbar {
     background-color: #79BAEC;
     background-clip: content-box;
     float: left;
@@ -11,11 +11,16 @@ html {
     border: white solid 3px;
     padding-left: 3px;
 
-}
+}*/
 
-.column {
+.column_top {
     float: left;
     width: 25%;
+}
+
+.column_bottom {
+    float: left;
+    width: 50%;
 }
 
 
@@ -35,8 +40,20 @@ html {
     background-color: #FBF6D9;
 }
 
+.blockchain {
+    background-color: beige;
+}
+
+.rounds {
+    background-color: lightgoldenrodyellow;
+}
+
 .interactive {
     background-color: #79BAEC;
+}
+
+header {
+    background-color: goldenrod;
 }
 
 .hidden{display:none;}

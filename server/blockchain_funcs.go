@@ -6,6 +6,7 @@ import (
 	"github.com/dedis/protobuf"
 	"math/rand"
 	"strconv"
+	"time"
 )
 
 func CreateBlock(info FileInfo) BlockPublish {
@@ -57,7 +58,7 @@ func HandleBlock(block BlockPublish, gossiper Gossiper) {
 		" file name " + msg.TxBlock.Transaction.Name + " size " + strconv.FormatInt(msg.TxBlock.Transaction.Size, 10) +
 		" metahash " + hex.EncodeToString(msg.TxBlock.Transaction.MetafileHash))
 
-	if Simple_File_Share || Round_based_TLC && !gossiper.tlcSentForCurrentTime && len(gossiper.tlcBuffer) == 0 {
+	if Simple_File_Share || (Round_based_TLC && !gossiper.tlcSentForCurrentTime && len(gossiper.tlcBuffer) == 0) {
 		gossiper.tlcSentForCurrentTime = true
 		msg := wrapper.tclMsg
 		newEncoded, err := protobuf.Encode(&GossipPacket{TLCMessage: msg})
@@ -69,11 +70,27 @@ func HandleBlock(block BlockPublish, gossiper Gossiper) {
 			addToMongering(randomPeer, msg.Origin, msg.ID)
 
 			go statusCountDown(wrapper, randomPeer, &gossiper)
+			go stubbornRepeat(msg, gossiper)
 		}
 	} else {
 		gossiper.tlcBuffer = append(gossiper.tlcBuffer, wrapper.tclMsg.TxBlock)
 	}
 
+}
+
+func stubbornRepeat(msg *TLCMessage, gossiper Gossiper) {
+	for {
+		ticker := time.NewTicker(time.Duration(StubbornTimeout) * time.Second)
+		<-ticker.C
+		if len(gossiper.tclAcks[msg.ID]) >= (N/2+1) || (Round_based_TLC && len(gossiper.tlcBuffer) > 0) {
+			return
+		} else {
+			randomPeer := Keys[rand.Intn(len(Keys))]
+			newEncoded, err := protobuf.Encode(&GossipPacket{TLCMessage: msg})
+			printerr("Rumor Gossiper Error", err)
+			sendPacket(newEncoded, randomPeer, &gossiper)
+		}
+	}
 }
 
 func MakeTClMessageForBlock(block BlockPublish, gossiper Gossiper) RumorableMessage {

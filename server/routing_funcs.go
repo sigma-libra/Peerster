@@ -66,7 +66,10 @@ func handlePrivateMessage(msg *PrivateMessage, gossip *Gossiper) {
 		} else {
 			gossip.mu.Lock()
 			gossip.tclAcks[msg.ID] = append(gossip.tclAcks[msg.ID], msg.Origin)
-			if len(gossip.tclAcks[msg.ID]) < ((N/2)+1) {
+			if debug {
+				println("Number of acks: ", len(gossip.tclAcks[msg.ID]), "/", ((N/2)+1))
+			}
+			if len(gossip.tclAcks[msg.ID]) != ((N/2)+1) {
 				gossip.mu.Unlock()
 			} else {
 				oldTLCMessage := gossip.orderedMessages[gossip.Name][msg.ID-1]
@@ -74,9 +77,14 @@ func handlePrivateMessage(msg *PrivateMessage, gossip *Gossiper) {
 					Origin:      oldTLCMessage.Origin,
 					ID:          getAndUpdateRumorID(),
 					Confirmed:   int(oldTLCMessage.tclMsg.ID),
-					TxBlock:     BlockPublish{},
+					TxBlock:     oldTLCMessage.tclMsg.TxBlock,
 					VectorClock: nil, //TODO correctly initialize vector clock
 					Fitness:     0,
+				}
+
+				gossip.wantMap[gossip.Name] = PeerStatus{
+					Identifier: gossip.Name,
+					NextID:     newTLCMessage.ID + 1,
 				}
 
 				newWrap := RumorableMessage{
@@ -90,8 +98,8 @@ func handlePrivateMessage(msg *PrivateMessage, gossip *Gossiper) {
 
 				gossip.mu.Unlock()
 
-				logMsg := "RE-BROADCAST ID "+ strconv.Itoa(newTLCMessage.Confirmed)+
-					"WITNESSES ";
+				logMsg := "RE-BROADCAST ID "+ strconv.FormatUint(uint64(oldTLCMessage.ID), 10)+
+					" WITNESSES ";
 
 				for _, name:= range gossip.tclAcks[msg.ID] {
 					logMsg += name + ","

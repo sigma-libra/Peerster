@@ -68,7 +68,10 @@ type Gossiper struct {
 	tlcSentForCurrentTime bool
 	tlcBuffer             []BlockPublish
 	roundTracker          map[string]int
+	lastMatch             map[string]map[string]bool
+
 }
+
 
 func NewGossiper(address, name string) *Gossiper {
 	udpAddr, err := net.ResolveUDPAddr("udp4", address)
@@ -91,5 +94,6 @@ func NewGossiper(address, name string) *Gossiper {
 		tlcBuffer:             make([]BlockPublish, 0),
 		tlcSentForCurrentTime: false,
 		roundTracker:          make(map[string]int),
+		lastMatch:             make(map[string]map[string]bool),
 	}
 }

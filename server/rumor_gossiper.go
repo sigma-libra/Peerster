@@ -49,7 +49,7 @@ func HandleRumorMessagesFrom(gossiper *Gossiper) {
 			handleReplyMessage(msg, gossiper)
 		} else if pkt.SearchRequest != nil {
 			msg := pkt.SearchRequest
-			handleSearchRequest(msg, gossiper, arrivalTime, true)
+			handleSearchRequest(*msg, gossiper, arrivalTime)
 		} else if pkt.SearchReply != nil {
 			msg := pkt.SearchReply
 			handleSearchReply(msg, gossiper)
@@ -189,14 +189,6 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 
 		} else if text == "" && !exists(dest) && exists(file) && request == nil { //hw4 - upload file: !text, !dest, file, !request -> upload file
 			ReadFileIntoChunks(*file)
-			if Simple_File_Share {
-				// send TLC informing of new block
-			}
-
-			if Round_based_TLC {
-				//
-
-			}
 		} else if keywords != nil && len(*keywords) > 0 { //keyword
 
 		var increasingBudget bool
@@ -212,7 +204,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 				Budget:   *budget,
 				Keywords: *keywords,
 			}
-			go SendRepeatedSearchRequests(&msg, peerGossiper, increasingBudget)
+			go SendRepeatedSearchRequests(msg, peerGossiper, increasingBudget)
 		}
 	}
 

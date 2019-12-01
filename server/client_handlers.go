@@ -98,6 +98,39 @@ func GetLatestMatchingFilesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func GetConfirmedRumorMessages(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		jsonString, err := json.Marshal(confirmed)
+		printerr("Frontend Error", err)
+		// error handling, etc...
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err = w.Write(jsonString)
+		printerr("Frontend Error", err)
+	default:
+		if debug{
+		println(w, "Sorry, only GET methods are supported.")
+		}
+	}
+}
+
+func GetRounds(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		jsonString, err := json.Marshal(rounds)
+		printerr("Frontend Error", err)
+		// error handling, etc...
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err = w.Write(jsonString)
+		printerr("Frontend Error", err)
+	default:
+		if debug{
+			println(w, "Sorry, only GET methods are supported.")
+		}
+	}
+}
 func GetLatestNodesHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":

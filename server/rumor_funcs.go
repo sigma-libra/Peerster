@@ -23,7 +23,8 @@ func sendAck(msg TLCMessage, gossiper *Gossiper) {
 	newPacketBytes, err := protobuf.Encode(&GossipPacket{Private: &ack})
 	printerr("TLC Message ack protobuf encoding", err)
 
-	sendPacket(newPacketBytes, ack.Destination, gossiper)
+	nextHop := getNextHop(ack.Destination)
+	sendPacket(newPacketBytes, nextHop, gossiper)
 }
 
 func handleRumorableMessage(msg *RumorableMessage, sender string, gossip *Gossiper) bool {
@@ -43,7 +44,7 @@ func handleRumorableMessage(msg *RumorableMessage, sender string, gossip *Gossip
 		}
 		routingTable.LastMsgID[msg.Origin] = msg.ID
 
-		if ! msg.isTLC && msg.rumorMsg.Text != "" {
+		if (!msg.isTLC) && msg.rumorMsg.Text != "" {
 			fmt.Println("DSDV " + msg.Origin + " " + sender)
 		}
 	}
@@ -58,33 +59,45 @@ func handleRumorableMessage(msg *RumorableMessage, sender string, gossip *Gossip
 
 		//TODO check validiticy of filenames
 
-		if !msg.isTLC && msg.rumorMsg.Origin != gossip.Name {
-			printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.rumorMsg.Text
-			fmt.Println(printMsg)
-		}
-
-		if msg.isTLC && msg.tclMsg.Confirmed == -1 {
-			fmt.Println("UNCONFIRMED GOSSIP origin " + msg.Origin + " ID " + strconv.FormatUint(uint64(msg.ID), 10) +
-				" file name " + msg.tclMsg.TxBlock.Transaction.Name + " size " + strconv.FormatInt(msg.tclMsg.TxBlock.Transaction.Size, 10) +
-				" metahash " + hex.EncodeToString(msg.tclMsg.TxBlock.Transaction.MetafileHash))
-
-			sendAck(*msg.tclMsg, gossip)
-
-			_, trackingOrigin := gossip.roundTracker[msg.Origin]
-			if !trackingOrigin {
-
+		if !msg.isTLC {
+			if msg.rumorMsg.Origin != gossip.Name {
+				printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.rumorMsg.Text
+				fmt.Println(printMsg)
 			}
+
+			if (msg.rumorMsg.Text != "") && (msg.Origin != gossip.Name) {
+				messages += msg.Origin + ": " + msg.rumorMsg.Text + "\n"
+			}
+		} else {
+
+			if msg.tclMsg.Confirmed == -1 {
+				fmt.Println("UNCONFIRMED GOSSIP origin " + msg.Origin + " ID " + strconv.FormatUint(uint64(msg.ID), 10) +
+					" file name " + msg.tclMsg.TxBlock.Transaction.Name + " size " + strconv.FormatInt(msg.tclMsg.TxBlock.Transaction.Size, 10) +
+					" metahash " + hex.EncodeToString(msg.tclMsg.TxBlock.Transaction.MetafileHash))
+
+				if Simple_File_Share || (Round_based_TLC && gossip.roundTracker[msg.Origin] >= gossip.my_time) || AckAll {
+					sendAck(*msg.tclMsg, gossip)
+				}
+
+				_, trackingOrigin := gossip.roundTracker[msg.Origin]
+				if !trackingOrigin {
+					gossip.roundTracker[msg.Origin] = 1
+				} else {
+					gossip.roundTracker[msg.Origin] += 1
+				}
+			}
+
+			if msg.tclMsg.Confirmed > -1 {
+				str1 := "CONFIRMED GOSSIP origin " + msg.Origin + " ID " + strconv.FormatUint(uint64(msg.tclMsg.Confirmed), 10) +
+					" file name " + msg.tclMsg.TxBlock.Transaction.Name + " size " + strconv.FormatInt(msg.tclMsg.TxBlock.Transaction.Size, 10)
+				str2 :=" metahash " + hex.EncodeToString(msg.tclMsg.TxBlock.Transaction.MetafileHash)
+				fmt.Println(str1 + str2)
+				confirmed += str1 + "\n" + str2 + "\n"
+			}
+
 		}
 
-		if msg.isTLC && msg.tclMsg.Confirmed > -1 {
-			fmt.Println("CONFIRMED GOSSIP origin " + msg.Origin + " ID " + strconv.FormatUint(uint64(msg.ID), 10) +
-				" file name " + msg.tclMsg.TxBlock.Transaction.Name + " size " + strconv.FormatInt(msg.tclMsg.TxBlock.Transaction.Size, 10) +
-				" metahash " + hex.EncodeToString(msg.tclMsg.TxBlock.Transaction.MetafileHash))
-		}
 
-		if ! msg.isTLC && msg.rumorMsg.Text != "" && (msg.Origin != gossip.Name) {
-			messages += msg.Origin + ": " + msg.rumorMsg.Text + "\n"
-		}
 
 		//pick random peer to send to
 		randomPeer := Keys[rand.Intn(len(Keys))]
@@ -121,11 +134,24 @@ func handleRumorableMessage(msg *RumorableMessage, sender string, gossip *Gossip
 					}
 					if nbAboveRound >= (N/2) + 1 || gossip.my_time == 0 {
 						gossip.my_time += 1
-						gossip.tlcSentForCurrentTime = false
-						nextBlock := gossip.tlcBuffer[0]
-						gossip.tlcBuffer = gossip.tlcBuffer[1:]
+						str := "ADVANCING TO round "+ strconv.Itoa(gossip.my_time) +" BASED ON CONFIRMED MESSAGES"
+						rounds += str + "\n"
+						for i, peer := range gossip.tclAcks[msg.ID] {
+							id := strconv.Itoa(i+1)
+							node := "origin" + id + " " + peer + " ID" + id + " " + strconv.FormatUint(uint64(msg.ID), 10) + " "
+							str += node
+							rounds += node + "\n"
+						}
+						fmt.Println(str)
+							//origin1 <origin> ID1 <ID>, origin2 <origin> ID2 <ID>")
+						if len(gossip.tlcBuffer) > 0 {
+							nextBlock := gossip.tlcBuffer[0]
+							gossip.tlcBuffer = gossip.tlcBuffer[1:]
+							HandleBlock(nextBlock, *gossip)
+						} else {
+							gossip.tlcSentForCurrentTime = false
+						}
 
-						HandleBlock(nextBlock, *gossip)
 
 					}
 				}

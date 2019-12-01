@@ -27,7 +27,7 @@ function getMessages() {
     $.getJSON('/message', function (data) {
         var idField = document.getElementById('MessagesField');
         idField.innerHTML = "Messages: \n" + data;
-        setTimeout(getMessages, 2000);
+        setTimeout(getMessages, 1000);
     });
 }
 
@@ -35,7 +35,7 @@ function getNodes() {
     $.getJSON('/nodes', function (data) {
         var idField = document.getElementById('PeersField');
         idField.innerHTML = "Peers: \n" + data;
-        setTimeout(getNodes, 2000);
+        setTimeout(getNodes, 1000);
     });
 }
 
@@ -52,9 +52,26 @@ function getFilenames() {
     $.getJSON('/matchingfiles', function (data) { //matchingfiles
         var idField = document.getElementById('FilesField');
         idField.innerHTML = "Matching Files: \n" + data;
-        setTimeout(getFilenames, 2000);
+        setTimeout(getFilenames, 1000);
     });
 }
+
+function getConfirmed() {
+    $.getJSON('/confirmed', function (data) {
+        var field = document.getElementById('BlockchainField');
+        field.innerHTML = "Confirmed: \n" + data;
+        setTimeout(getConfirmed, 1000);
+    });
+}
+
+function getRounds() {
+    $.getJSON('/rounds', function (data) {
+        var field = document.getElementById('RoundsField');
+        field.innerHTML = "Rounds: \n" + data;
+        setTimeout(getRounds, 1000);
+    });
+}
+
 
 function uploadfile() {
     $.post("/uploadFile", {"dst": dst, "hash": hash, "name": name});
@@ -66,7 +83,7 @@ function getmessageableNodes() {
         // Now that we've completed the request schedule the next one.
         var messageable = document.getElementById('MessageableField');
         messageable.innerHTML = "Messageable nodes (clickeable): \n" + data;
-        setTimeout(getmessageableNodes, 2000);
+        setTimeout(getmessageableNodes, 1000);
     });
 }
 
