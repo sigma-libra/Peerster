@@ -59,12 +59,12 @@ func ReadFileIntoChunks(filename string) {
 	fileInfo.metahash = hex.EncodeToString(metahash[:])
 
 	putInFileMemory(fileInfo)
-	block := CreateBlock(fileInfo)
-	HandleBlock(block, *PeerGossiper)
 
-	if debug {
-		println("Metahash: " + fileInfo.metahash)
+	if Simple_File_Share || Round_based_TLC || Ex4 {
+		block := CreateBlock(fileInfo)
+		HandleBlock(block, *PeerGossiper)
 	}
+
 }
 
 func putInFileMemory(info FileInfo) {
