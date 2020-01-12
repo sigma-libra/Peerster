@@ -45,7 +45,7 @@ func exists(str *string) bool {
 	return str != nil && *str != ""
 }
 
-func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Gossiper) {
+func HandleClientRumorMessages(clientGossiper *Gossiper, name string, peerGossiper *Gossiper) {
 
 	//ex3: uiport, dest, msg
 	//ex6: uiport,dest,file, request
@@ -54,11 +54,12 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 	initNode(name, peerGossiper)
 	for {
 
-		clientMessage := getAndDecodeFromClient(gossip)
+		clientMessage := getAndDecodeFromClient(clientGossiper)
 		text := clientMessage.Text
 		dest := clientMessage.Destination
 		file := clientMessage.File
 		request := clientMessage.Request
+		groups := clientMessage.Groups
 
 		if text == "" && exists(dest) && exists(file) && request != nil { //ex6: !text, dest, file, request
 
@@ -83,7 +84,7 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 			go downloadCountDown(key, *request, msg, peerGossiper)
 
 		} else if text != "" && exists(dest) && !exists(file) && request == nil { //case ex3: text, dest, !file, !request
-		//CLIENT MESSAGE <msg_text> dest <dst_name>
+			//CLIENT MESSAGE <msg_text> dest <dst_name>
 			fmt.Println("CLIENT MESSAGE " + text + " dest " + *dest)
 
 			msg := PrivateMessage{
@@ -110,15 +111,17 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 				Origin: name,
 				ID:     getAndUpdateRumorID(),
 				Text:   text,
+				Groups: groups,
 			}
 
 			peerGossiper.wantMap[peerGossiper.Name] = PeerStatus{
 				Identifier: peerGossiper.Name,
 				NextID:     msg.ID + 1,
+				Groups:     peerGossiper.wantMap[peerGossiper.Name].Groups,
 			}
 			peerGossiper.orderedMessages[peerGossiper.Name] = append(peerGossiper.orderedMessages[peerGossiper.Name], msg)
-			peerGossiper.mu.Unlock();
-
+			//peerGossiper.groupMap[peerGossiper.Name] = clientMessage.Groups
+			peerGossiper.mu.Unlock()
 			if msg.Text != "" {
 				messages += msg.Origin + ": " + msg.Text + "\n"
 			}
@@ -127,13 +130,15 @@ func HandleClientRumorMessages(gossip *Gossiper, name string, peerGossiper *Goss
 			printerr("Rumor Gossiper Error", err)
 
 			if len(KnownPeers) > 0 {
-				randomPeer := Keys[rand.Intn(len(Keys))]
-				sendPacket(newEncoded, randomPeer, peerGossiper)
-				addToMongering(randomPeer, msg.Origin, msg.ID)
+				peerGossiper.mu.Lock()
+				nextPeer := get_peer_with_group(msg.Groups, *peerGossiper)
+				peerGossiper.mu.Unlock()
+				sendPacket(newEncoded, nextPeer, peerGossiper)
+				addToMongering(nextPeer, msg.Origin, msg.ID)
 
-				//fmt.Println("MONGERING with " + randomPeer)
+				fmt.Println("MONGERING with " + nextPeer)
 
-				go statusCountDown(msg, randomPeer, peerGossiper)
+				go statusCountDown(msg, nextPeer, peerGossiper)
 			}
 
 		} else if text == "" && !exists(dest) && exists(file) && request == nil { //hw4 - upload file: !text, !dest, file, !request
@@ -184,7 +189,7 @@ func statusCountDown(msg RumorMessage, dst string, gossip *Gossiper) {
 			sendPacket(encoded, randomPeer, gossip)
 			addToMongering(randomPeer, msg.Origin, msg.ID)
 
-			//fmt.Println("MONGERING with " + randomPeer)
+			fmt.Println("MONGERING with " + randomPeer)
 
 			go statusCountDown(msg, randomPeer, gossip)
 
@@ -192,5 +197,3 @@ func statusCountDown(msg RumorMessage, dst string, gossip *Gossiper) {
 	}
 
 }
-
-

@@ -35,30 +35,38 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 	//message not received before: start mongering
 	if !receivedBefore {
 
+		groupString := ""
+		for _, grp := range msg.Groups {
+			groupString += grp + ", "
+		}
+		if len(groupString) > 0 {
+			groupString = groupString[:len(groupString)-2]
+		}
 		if msg.Origin != gossip.Name {
-			printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) + " contents " + msg.Text
+			printMsg := "RUMOR origin " + msg.Origin + " from " + sender + " ID " + strconv.FormatUint(uint64(msg.ID), 10) +
+				" contents " + msg.Text + " groups " + groupString
 			fmt.Println(printMsg)
 		}
 
 		if msg.Text != "" && (msg.Origin != gossip.Name) {
-			messages += msg.Origin + ": " + msg.Text + "\n"
+			messages += msg.Origin + ": " + msg.Text + "(" + groupString + ")" + "\n"
 		}
 
-		//pick random peer to send to
-		randomPeer := Keys[rand.Intn(len(Keys))]
+		nextPeer := get_peer_with_group(msg.Groups, *gossip)
 
 		newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: msg})
 		printerr("Gossiper Encode Error", err)
-		sendPacket(newEncoded, randomPeer, gossip)
+		sendPacket(newEncoded, nextPeer, gossip)
 
-		//fmt.Println("MONGERING with " + randomPeer)
-		addToMongering(randomPeer, msg.Origin, msg.ID)
+		fmt.Println("MONGERING with " + nextPeer)
+		addToMongering(nextPeer, msg.Origin, msg.ID)
 
 		//if next message we want, save in vector clock
 		if gossip.wantMap[msg.Origin].NextID == msg.ID {
 			gossip.wantMap[msg.Origin] = PeerStatus{
 				Identifier: msg.Origin,
 				NextID:     msg.ID + 1,
+				Groups:     gossip.wantMap[msg.Origin].Groups,
 			}
 			gossip.orderedMessages[msg.Origin] = append(gossip.orderedMessages[msg.Origin], *msg)
 			fastForward(msg.Origin, gossip)
@@ -68,7 +76,7 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 		}
 
 		//start countdown to monger to someone else
-		go statusCountDown(*msg, randomPeer, gossip)
+		go statusCountDown(*msg, nextPeer, gossip)
 
 	}
 
@@ -77,16 +85,23 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 	//}
 }
 
+
 func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 	printMsg := "STATUS from " + sender
 
 	//update our info about nodes
 	for _, wanted := range msg.Want {
 		initNode(wanted.Identifier, gossip)
-		printMsg += " peer " + wanted.Identifier + " nextID " + strconv.FormatUint(uint64(wanted.NextID), 10)
-
+		gossip.mu.Lock()
+		gossip.groupMap[wanted.Identifier] = wanted.Groups
+		oldPeer := gossip.wantMap[wanted.Identifier]
+		oldPeer.Groups = wanted.Groups
+		gossip.wantMap[wanted.Identifier] = oldPeer
+		printMsg += " peer " + wanted.Identifier + " nextID " + strconv.FormatUint(uint64(wanted.NextID), 10) + "(" + GroupsToString(wanted.Groups) + ")"
+		gossip.mu.Unlock()
 	}
-	//fmt.Println(printMsg)
+
+	fmt.Println(printMsg)
 	//check if this is an ack
 
 	sendMessage := false
@@ -95,7 +110,6 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 
 	sendStatus := false
 
-	//
 	isAck := false
 	originAcked := ""
 	idAcked := uint32(math.MaxUint32)
@@ -155,14 +169,14 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 		printerr("Gossiper Encode Error", err)
 		sendPacket(rumorEncoded, sender, gossip)
 		addToMongering(sender, msgToSend.Origin, msgToSend.ID)
-		//fmt.Println("MONGERING with " + sender)
+		fmt.Println("MONGERING with " + sender)
 		go statusCountDown(msgToSend, sender, gossip)
 	} else if sendStatus {
 		gossip.mu.Lock()
 		sendPacket(makeStatusPacket(gossip), sender, gossip)
 		gossip.mu.Unlock()
 	} else {
-		//fmt.Println("IN SYNC WITH " + sender)
+		fmt.Println("IN SYNC WITH " + sender)
 
 		//(3) If neither peer has new messages, the sending peer (rumormongering) peer S
 		//flips a coin (e.g., ​ rand.Int() % 2​ ), and either (heads) picks ​ a new
@@ -178,8 +192,8 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 				printerr("Gossiper Encode Error", err)
 				sendPacket(newEncoded, randomPeer, gossip)
 				addToMongering(randomPeer, originalMessage.Origin, originalMessage.ID)
-				//fmt.Println("MONGERING with " + randomPeer)
-				//fmt.Println("FLIPPED COIN sending rumor to " + randomPeer)
+				fmt.Println("MONGERING with " + randomPeer)
+				fmt.Println("FLIPPED COIN sending rumor to " + randomPeer)
 				go statusCountDown(originalMessage, randomPeer, gossip)
 			}
 		}
@@ -194,6 +208,11 @@ func initNode(name string, gossip *Gossiper) {
 		gossip.wantMap[name] = PeerStatus{
 			Identifier: name,
 			NextID:     1,
+			Groups:     make([]string, 0),
+		}
+		_, groupsKnownForSender := gossip.groupMap[name]
+		if !groupsKnownForSender {
+			gossip.groupMap[name] = make([]string, 0)
 		}
 	}
 
@@ -233,6 +252,9 @@ func addToMongering(dst string, origin string, ID uint32) {
 
 func makeStatusPacket(gossip *Gossiper) []byte {
 	wants := make([]PeerStatus, 0)
+	updateSelf := gossip.wantMap[gossip.Name]
+	updateSelf.Groups = groups
+	gossip.wantMap[gossip.Name] = updateSelf
 	for _, status := range gossip.wantMap {
 		wants = append(wants, status)
 	}
@@ -245,6 +267,7 @@ func makeStatusPacket(gossip *Gossiper) []byte {
 
 func fastForward(origin string, gossip *Gossiper) {
 	currentNext := gossip.wantMap[origin].NextID
+	originGroups := gossip.wantMap[origin].Groups
 	updated := false
 	indexesDelivered := make([]uint32, 0)
 	for {
@@ -269,6 +292,7 @@ func fastForward(origin string, gossip *Gossiper) {
 	gossip.wantMap[origin] = PeerStatus{
 		origin,
 		currentNext,
+		originGroups,
 	}
 
 }

@@ -42,10 +42,10 @@ func makeRouteRumor(gossip *Gossiper) []byte {
 	gossip.wantMap[gossip.Name] = PeerStatus{
 		Identifier: gossip.Name,
 		NextID:     msg.ID + 1,
+		Groups:     groups,
 	}
 	gossip.orderedMessages[gossip.Name] = append(gossip.orderedMessages[gossip.Name], msg)
-	gossip.mu.Unlock();
-
+	gossip.mu.Unlock()
 	newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &msg})
 	printerr("Routing Error", err)
 	return newEncoded

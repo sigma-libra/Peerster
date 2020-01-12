@@ -67,6 +67,7 @@ func setUpWindow(guiport string) {
 	http.HandleFunc("/nodes", gossiper.GetLatestNodesHandler)
 	http.HandleFunc("/uploadFile", gossiper.GetFileUploadHandler)
 	http.HandleFunc("/download", gossiper.GetFileDownloadHandler)
+	http.HandleFunc("/groups", gossiper.GroupsHandler)
 	for {
 
 		err := http.ListenAndServe( "localhost:" + guiport, nil)

@@ -9,9 +9,25 @@ function add_node() {
 function send_message() {
 
     var msg = document.getElementById('new_message').value;
+    var groups = document.getElementById("new_message_groups").value;
 
-    $.post("/message", {"newMessage":msg});
+    $.post("/message", {"newMessage":msg, "groups": groups});
 
+}
+
+function add_group() {
+    var group = document.getElementById('new_group').value;
+    $.post("/groups", {"group": group});
+    //document.getElementById("GroupsField").innerHTML += "\n" + group;
+
+}
+
+function getGroups() {
+    $.getJSON('/groups', function(data) {
+        var idField = document.getElementById('GroupsField');
+        idField.innerHTML = "Groups: \n" + data;
+        setTimeout(getGroups, 2000);
+    });
 }
 
 // Use a named immediately-invoked function expression.

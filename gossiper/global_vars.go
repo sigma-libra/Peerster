@@ -16,6 +16,7 @@ var mongerer = Mongering{
 
 var NodeID IDStruct
 var messages = ""
+var groups = make([]string, 0)
 var nodes = ""
 var PeerName = ""
 var PeerUIPort = ""

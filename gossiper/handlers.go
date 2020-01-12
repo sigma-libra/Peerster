@@ -57,11 +57,48 @@ func GetLatestRumorMessagesHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		newMessage := r.FormValue("newMessage")
+		groups := r.FormValue("groups")
 		dst := ""
-		SendClientMessage(&newMessage, &PeerUIPort, &dst, nil, nil)
+		SendClientMessage(&newMessage, &PeerUIPort, &dst, nil, nil, &groups)
 	default:
 		if debug {
 			println(w, "Sorry, only GET and POST methods are supported.")
+		}
+	}
+}
+
+func GroupsHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "POST":
+		// Call ParseForm() to parse the raw query and update r.PostForm and r.Form.
+		if err := r.ParseForm(); err != nil {
+			if debug {
+				println(w, "ParseForm() err: %v", err)
+			}
+			return
+		}
+		println("Handling group")
+		newGroup := r.FormValue("group")
+		groups = append(groups, newGroup)
+		fmt.Println("New group: " + newGroup)
+
+	case "GET":
+		groupString := ""
+		for _, group := range groups {
+			groupString += group + "\n"
+		}
+		groupsJson, err := json.Marshal(groupString)
+		printerr("Frontend Error", err)
+		// error handling, etc...
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err = w.Write(groupsJson)
+		printerr("Frontend Error", err)
+
+
+	default:
+		if debug {
+			println(w, "Sorry, only POST methods are supported.")
 		}
 	}
 }
@@ -113,7 +150,7 @@ func GetLatestMessageableNodesHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		newMessage := r.FormValue("newMessage")
 		dst := r.FormValue("dest")
-		SendClientMessage(&newMessage, &PeerUIPort, &dst, nil, nil)
+		SendClientMessage(&newMessage, &PeerUIPort, &dst, nil, nil, nil)
 	default:
 		if debug {
 			println(w, "Sorry, only GET and POST methods are supported.")
@@ -171,7 +208,7 @@ func GetFileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 				os.Exit(1)
 			}
 			emptyMsg := ""
-			SendClientMessage(&emptyMsg, &PeerUIPort, &dst, &fileHash, &name)
+			SendClientMessage(&emptyMsg, &PeerUIPort, &dst, &fileHash, &name, nil)
 		}
 
 	default:

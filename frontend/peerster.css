@@ -8,6 +8,16 @@ header, footer {
 
 }
 
+.textfield {
+    width: 24%;
+    display: inline-block;
+
+}
+
+footer {
+    margin-top: 50px;
+}
+
 
 .nodes {
     background-color: #F7FDEB;

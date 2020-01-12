@@ -10,11 +10,13 @@ type RumorMessage struct {
 	Origin string
 	ID     uint32
 	Text   string
+	Groups []string //project
 }
 
 type PeerStatus struct {
 	Identifier string
 	NextID     uint32
+	Groups     []string //projet
 }
 
 type StatusPacket struct {
@@ -50,6 +52,7 @@ type Gossiper struct {
 	Name            string
 	mu              sync.Mutex
 	wantMap         map[string]PeerStatus
+	groupMap        map[string][]string
 	earlyMessages   map[string]map[uint32]RumorMessage
 	orderedMessages map[string][]RumorMessage
 }
@@ -68,6 +71,7 @@ func NewGossiper(address, name string) *Gossiper {
 		Name:            name,
 		mu:              sync.Mutex{},
 		wantMap:         make(map[string]PeerStatus),
+		groupMap:        make(map[string][]string),
 		earlyMessages:   make(map[string]map[uint32]RumorMessage),
 		orderedMessages: make(map[string][]RumorMessage),
 	}

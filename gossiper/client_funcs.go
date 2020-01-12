@@ -3,6 +3,7 @@ package gossiper
 import (
 	"github.com/dedis/protobuf"
 	"net"
+	"strings"
 )
 
 type Message struct {
@@ -10,16 +11,22 @@ type Message struct {
 	Destination *string
 	File        *string
 	Request     *[]byte
+	Groups      []string //project
 }
 
-func SendClientMessage(msg *string, uiport *string, dest *string, fileHash *[]byte, file *string) {
+func SendClientMessage(msg *string, uiport *string, dest *string, fileHash *[]byte, file *string, groups *string) {
 
+	group_list := make([]string, 0)
+	if groups != nil {
+		group_list = strings.Split(*groups, ",")
+	}
 	//To test file sending
 	packet := Message{
 		Text:        *msg,
 		Destination: dest,
 		File:        file,
 		Request:     fileHash,
+		Groups:      group_list,
 	}
 	packetToSend, err := protobuf.Encode(&packet)
 	printerr("Client Encode Error", err)

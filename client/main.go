@@ -32,13 +32,13 @@ func main() {
 			os.Exit(1)
 		}
 		if requestFile {
-			gossiper.SendClientMessage(msg, uiport, dest, &fileHash, file)
+			gossiper.SendClientMessage(msg, uiport, dest, &fileHash, file, nil)
 			return
 		}
 	}
 
 	if indexFileLocally || sendPrivateMessage || sendRumorMessage {
-		gossiper.SendClientMessage(msg, uiport, dest, nil, file)
+		gossiper.SendClientMessage(msg, uiport, dest, nil, file, nil)
 	} else {
 		fmt.Println("ERROR (Bad argument combination)")
 		os.Exit(1)
