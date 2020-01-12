@@ -15,7 +15,7 @@ var mongerer = Mongering{
 }
 
 var NodeID IDStruct
-var messages = ""
+var messages = make(map[string]string)
 var groups = make([]string, 0)
 var nodes = ""
 var PeerName = ""

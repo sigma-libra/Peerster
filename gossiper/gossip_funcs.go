@@ -49,7 +49,17 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 		}
 
 		if msg.Text != "" && (msg.Origin != gossip.Name) {
-			messages += msg.Origin + ": " + msg.Text + "(" + groupString + ")" + "\n"
+			msgGroups:= msg.Groups
+			msgGroups = append(msgGroups, "all")
+			msgGroups = append(msgGroups, msg.Origin)
+			for _, gr := range msgGroups {
+				_, known := messages[gr]
+				if !known {
+					messages[gr] = msg.Origin + ": " + msg.Text +  "\n"
+				} else {
+					messages[gr] += msg.Origin + ": " + msg.Text + "\n"
+				}
+			}
 		}
 
 		nextPeer := get_peer_with_group(msg.Groups, *gossip)

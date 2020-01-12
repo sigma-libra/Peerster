@@ -65,7 +65,15 @@ func handlePrivateMessage(msg *PrivateMessage, gossip *Gossiper) {
 
 	if msg.Destination == gossip.Name {
 		fmt.Println("PRIVATE origin " + msg.Origin + " hop-limit " + strconv.FormatInt(int64(msg.HopLimit), 10) + " contents " + msg.Text)
-		messages += msg.Origin + " (private): " + msg.Text + "\n"
+		msgGroups := [2]string{"all", msg.Origin}
+		for _, gr := range msgGroups {
+			_, known := messages[gr]
+			if !known {
+				messages[gr] = msg.Origin + " (private): " + msg.Text + "\n"
+			} else {
+				messages[gr] += msg.Origin + " (private): " + msg.Text + "\n"
+			}
+		}
 	} else {
 		if msg.HopLimit > 0 {
 			msg.HopLimit -= 1

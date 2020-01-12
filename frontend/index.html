@@ -5,6 +5,14 @@
 <head>
     <link rel="stylesheet" type="text/css" href="peerster.css">
     <title>Peerster</title>
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <script>
+        $( function() {
+            $( "#tabs" ).tabs();
+        } );
+    </script>
 
 </head>
 <body>
@@ -27,7 +35,8 @@
     </div>
 
     <div class="textfield">
-        <pre id="MessagesField" class="nodes" style="overflow-y: scroll; height:400px;">Messages:</pre>
+        <div id="MessagesField" class="nodes" style="overflow-y: scroll; height:400px;"></div>
+
 
     </div>
     <div class="textfield">
@@ -38,11 +47,15 @@
 
     <div class="textfield">
         <label for="new_node">New Node : </label><input type="text" id="new_node" style="width:50%;">
+        <div>
         <button type="button" onclick="add_node()">Add Node</button>
+        </div>
     </div>
     <div class="textfield">
         <label for="new_group">New group : </label><input type="text" id="new_group" style="width:50%;">
+        <div>
         <button type="button" onclick="add_group()">Add Group</button>
+        </div>
     </div>
 
 
@@ -50,7 +63,9 @@
         <label for="new_message">New Message : </label><input type="text" id="new_message" style="width:54%;">
         <div>
             <label for="new_message_groups">Message Groups : </label><input type="text" id="new_message_groups" style="width:50%;">
+            <div>
             <button type="button" onclick="send_message()">Send</button>
+            </div>
         </div>
     </div>
     <div class="textfield">

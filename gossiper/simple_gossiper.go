@@ -32,13 +32,20 @@ func HandleSimpleMessagesFrom(gossip *Gossiper, gossipAddr *string) {
 		}
 
 		for dst, _ := range KnownPeers {
-			if dst != originalRelay  {
+			if dst != originalRelay {
 				sendPacket(newPacketBytes, dst, gossip)
 			}
 		}
 
-		messages = messages + newOriginalName + ": " + msg.Contents + "\n"
-
+		msgGroups := [2]string{"all", newOriginalName}
+		for _, gr := range msgGroups {
+			_, known := messages[gr]
+			if !known {
+				messages[gr] = newOriginalName + ": " + msg.Contents + "\n"
+			} else {
+				messages[gr] += newOriginalName + ": " + msg.Contents + "\n"
+			}
+		}
 	}
 }
 
@@ -63,7 +70,15 @@ func HandleSimpleClientMessagesFrom(gossip *Gossiper, gossipAddr *string, peerGo
 			sendPacket(newPacketBytes, dst, peerGossip)
 		}
 
-		messages = messages + gossip.Name + ": " + text + "\n"
+		msgGroups := [2]string{"all", gossip.Name}
+		for _, gr := range msgGroups {
+			_, known := messages[gr]
+			if !known {
+				messages[gr] = gossip.Name + ": " + text + "\n"
+			} else {
+				messages[gr] += gossip.Name + ": " + text + "\n"
+			}
+		}
 
 	}
 }

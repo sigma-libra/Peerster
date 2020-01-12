@@ -95,7 +95,15 @@ func HandleClientRumorMessages(clientGossiper *Gossiper, name string, peerGossip
 				HopLimit:    HOP_LIMIT - 1,
 			}
 
-			messages += msg.Origin + " (private): " + msg.Text + "\n"
+			msgGroups := [2]string{"all", msg.Origin}
+			for _, gr := range msgGroups {
+				_, known := messages[gr]
+				if !known {
+					messages[gr] = msg.Origin + " (private): " + msg.Text + "\n"
+				} else {
+					messages[gr] += msg.Origin + " (private): " + msg.Text + "\n"
+				}
+			}
 
 			newEncoded, err := protobuf.Encode(&GossipPacket{Private: &msg})
 			printerr("Rumor Gossiper Error", err)
@@ -122,8 +130,17 @@ func HandleClientRumorMessages(clientGossiper *Gossiper, name string, peerGossip
 			peerGossiper.orderedMessages[peerGossiper.Name] = append(peerGossiper.orderedMessages[peerGossiper.Name], msg)
 			//peerGossiper.groupMap[peerGossiper.Name] = clientMessage.Groups
 			peerGossiper.mu.Unlock()
-			if msg.Text != "" {
-				messages += msg.Origin + ": " + msg.Text + "\n"
+
+			msgGroups:= msg.Groups
+			msgGroups = append(msgGroups, "all")
+			msgGroups = append(msgGroups, msg.Origin)
+			for _, gr := range msgGroups {
+				_, known := messages[gr]
+				if !known {
+					messages[gr] = msg.Origin + ": " + msg.Text +  "\n"
+				} else {
+					messages[gr] += msg.Origin + ": " + msg.Text + "\n"
+				}
 			}
 
 			newEncoded, err := protobuf.Encode(&GossipPacket{Rumor: &msg})
