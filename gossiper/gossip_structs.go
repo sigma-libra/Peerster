@@ -55,6 +55,7 @@ type Gossiper struct {
 	groupMap        map[string][]string
 	earlyMessages   map[string]map[uint32]RumorMessage
 	orderedMessages map[string][]RumorMessage
+	groupMessages   map[string][]RumorMessage
 }
 
 func NewGossiper(address, name string) *Gossiper {
@@ -74,6 +75,7 @@ func NewGossiper(address, name string) *Gossiper {
 		groupMap:        make(map[string][]string),
 		earlyMessages:   make(map[string]map[uint32]RumorMessage),
 		orderedMessages: make(map[string][]RumorMessage),
+		groupMessages: make(map[string][]RumorMessage),
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/dedis/protobuf"
 	"math/rand"
+	"strconv"
 	"time"
 )
 
@@ -59,7 +60,7 @@ func HandleClientRumorMessages(clientGossiper *Gossiper, name string, peerGossip
 		dest := clientMessage.Destination
 		file := clientMessage.File
 		request := clientMessage.Request
-		groups := clientMessage.Groups
+		msgGroups := clientMessage.Groups
 
 		if text == "" && exists(dest) && exists(file) && request != nil { //ex6: !text, dest, file, request
 
@@ -95,7 +96,7 @@ func HandleClientRumorMessages(clientGossiper *Gossiper, name string, peerGossip
 				HopLimit:    HOP_LIMIT - 1,
 			}
 
-			msgGroups := [2]string{"all", msg.Origin}
+			msgGroups := [2]string{msg.Origin}
 			for _, gr := range msgGroups {
 				_, known := messages[gr]
 				if !known {
@@ -112,14 +113,27 @@ func HandleClientRumorMessages(clientGossiper *Gossiper, name string, peerGossip
 			sendPacket(newEncoded, nextHop, peerGossiper)
 
 		} else if text != "" && !exists(dest) && !exists(file) && request == nil { //HW1 rumor message: //text, !dest, !file, !request
-			fmt.Println("CLIENT MESSAGE " + text)
+
+			groupstr := ""
+			for _, grp := range msgGroups {
+				groupstr += grp + ", "
+			}
+			if groupstr != "" {
+				groupstr = groupstr[:len(groupstr) - 2]
+			}
+			fmt.Println("CLIENT MESSAGE " + text + "(groups: " + groupstr + ")")
+
+			if len(msgGroups) == 0 || (len(msgGroups) == 1 && msgGroups[0] == "") || (len(msgGroups) == 1 && msgGroups[0] == " ") {
+				fmt.Println("no group found")
+				msgGroups = append(msgGroups, "no group")
+			}
 
 			peerGossiper.mu.Lock()
 			msg := RumorMessage{
 				Origin: name,
 				ID:     getAndUpdateRumorID(),
 				Text:   text,
-				Groups: groups,
+				Groups: msgGroups,
 			}
 
 			peerGossiper.wantMap[peerGossiper.Name] = PeerStatus{
@@ -127,19 +141,27 @@ func HandleClientRumorMessages(clientGossiper *Gossiper, name string, peerGossip
 				NextID:     msg.ID + 1,
 				Groups:     peerGossiper.wantMap[peerGossiper.Name].Groups,
 			}
+
 			peerGossiper.orderedMessages[peerGossiper.Name] = append(peerGossiper.orderedMessages[peerGossiper.Name], msg)
-			//peerGossiper.groupMap[peerGossiper.Name] = clientMessage.Groups
+			for _, grp := range msg.Groups {
+				peerGossiper.groupMessages[grp] = append(peerGossiper.groupMessages[grp], msg)
+			}
+			_, hasMessage := peerGossiper.orderedMessages[peerGossiper.Name]
+			fmt.Println("Added message: " + msg.Text + "to orderedMessages: " + strconv.FormatBool(hasMessage))
+
 			peerGossiper.mu.Unlock()
 
-			msgGroups:= msg.Groups
-			msgGroups = append(msgGroups, "all")
-			msgGroups = append(msgGroups, msg.Origin)
+			msgGroups := msg.Groups
+
 			for _, gr := range msgGroups {
 				_, known := messages[gr]
-				if !known {
-					messages[gr] = msg.Origin + ": " + msg.Text +  "\n"
-				} else {
-					messages[gr] += msg.Origin + ": " + msg.Text + "\n"
+				wanted := groups[gr]
+				if wanted {
+					if !known {
+						messages[gr] = msg.Origin + ": " + msg.Text + "\n"
+					} else {
+						messages[gr] += msg.Origin + ": " + msg.Text + "\n"
+					}
 				}
 			}
 
@@ -181,9 +203,37 @@ func FireAntiEntropy(gossip *Gossiper) {
 	}
 }
 
+func UpdateMessages(gossip *Gossiper) {
+	ticker := time.NewTicker(STATUS_COUNTDOWN_TIME * time.Second)
+	<-ticker.C
+
+	for grp, here := range groups {
+		if here {
+			_, alreadyPrinted := messages[grp]
+			if !alreadyPrinted {
+				fmt.Println("Not yet printed: " + grp)
+				gossip.mu.Lock()
+				deliveredMessages, hasMessages := gossip.groupMessages[grp]
+				gossip.mu.Unlock()
+				fmt.Println(grp + " has messages: " + strconv.FormatBool(hasMessages))
+				if hasMessages {
+					messages[grp] = ""
+					for _, oldMessage := range deliveredMessages {
+						if oldMessage.Text != "" {
+							messages[grp] += oldMessage.Origin + ": " + oldMessage.Text + "\n"
+							fmt.Println("Printed Message for " + grp)
+						}
+					}
+				}
+			}
+		}
+	}
+	go UpdateMessages(gossip)
+}
+
 func statusCountDown(msg RumorMessage, dst string, gossip *Gossiper) {
 
-	ticker := time.NewTicker(STATUS_COUNTDOWN_TIME * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
 	<-ticker.C
 
 	mongerer.mu.Lock()

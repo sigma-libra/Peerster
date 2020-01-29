@@ -1,7 +1,8 @@
 package gossiper
 
-
-import "sync"
+import (
+	"sync"
+)
 
 //var Files = make(map[string]FileInfo)
 var fileMemory = FileMemory{
@@ -16,7 +17,7 @@ var mongerer = Mongering{
 
 var NodeID IDStruct
 var messages = make(map[string]string)
-var groups = make([]string, 0)
+var groups = make(map[string]bool)
 var nodes = ""
 var PeerName = ""
 var PeerUIPort = ""

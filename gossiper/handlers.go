@@ -79,13 +79,15 @@ func GroupsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		println("Handling group")
 		newGroup := r.FormValue("group")
-		groups = append(groups, newGroup)
+		groups[newGroup] = true
 		fmt.Println("New group: " + newGroup)
 
 	case "GET":
 		groupString := ""
-		for _, group := range groups {
-			groupString += group + "\n"
+		for group, here := range groups {
+			if here {
+				groupString += group + "\n"
+			}
 		}
 		groupsJson, err := json.Marshal(groupString)
 		printerr("Frontend Error", err)

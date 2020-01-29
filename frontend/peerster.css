@@ -3,7 +3,7 @@ main {
 }
 
 header, footer {
-    background-color: #BCCE98;
+    background-color: #007fff;
     height: 50px
 
 }
@@ -20,11 +20,11 @@ footer {
 
 
 .nodes {
-    background-color: #F7FDEB;
+    background-color: #e9e9e9;
 }
 
 .chat {
-    background-color: #DAE9BC;
+    background-color: #f6f6f6;
 }
 
 /*button {

@@ -52,6 +52,8 @@ func main() {
 		go gossiper.HandleRumorMessagesFrom(&peerGossiper)
 		go gossiper.HandleClientRumorMessages(&clientGossiper, *name, &peerGossiper)
 		go gossiper.FireAntiEntropy(&peerGossiper)
+		go gossiper.UpdateMessages(&peerGossiper)
+
 
 	}
 
@@ -60,6 +62,7 @@ func main() {
 }
 
 func setUpWindow(guiport string) {
+
 	http.Handle("/", http.FileServer(http.Dir("./frontend")))
 	http.HandleFunc("/id", gossiper.GetIdHandler)
 	http.HandleFunc("/message", gossiper.GetLatestRumorMessagesHandler)

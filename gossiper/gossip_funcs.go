@@ -50,14 +50,17 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 
 		if msg.Text != "" && (msg.Origin != gossip.Name) {
 			msgGroups:= msg.Groups
-			msgGroups = append(msgGroups, "all")
-			msgGroups = append(msgGroups, msg.Origin)
+			//msgGroups = append(msgGroups, "all")
+			//msgGroups = append(msgGroups, msg.Origin)
 			for _, gr := range msgGroups {
 				_, known := messages[gr]
-				if !known {
-					messages[gr] = msg.Origin + ": " + msg.Text +  "\n"
-				} else {
-					messages[gr] += msg.Origin + ": " + msg.Text + "\n"
+				wanted := groups[gr]
+				if wanted {
+					if !known {
+						messages[gr] = msg.Origin + ": " + msg.Text + "\n"
+					} else {
+						messages[gr] += msg.Origin + ": " + msg.Text + "\n"
+					}
 				}
 			}
 		}
@@ -79,6 +82,9 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 				Groups:     gossip.wantMap[msg.Origin].Groups,
 			}
 			gossip.orderedMessages[msg.Origin] = append(gossip.orderedMessages[msg.Origin], *msg)
+			for _, grp := range msg.Groups {
+				gossip.groupMessages[grp] = append(gossip.groupMessages[grp], *msg)
+			}
 			fastForward(msg.Origin, gossip)
 		} else {
 			// too early: save for later
@@ -235,6 +241,8 @@ func initNode(name string, gossip *Gossiper) {
 	if !listExists {
 		gossip.earlyMessages[name] = make(map[uint32]RumorMessage)
 	}
+	groups[name] = true
+	groups["no group"] = true
 
 }
 
@@ -263,7 +271,13 @@ func addToMongering(dst string, origin string, ID uint32) {
 func makeStatusPacket(gossip *Gossiper) []byte {
 	wants := make([]PeerStatus, 0)
 	updateSelf := gossip.wantMap[gossip.Name]
-	updateSelf.Groups = groups
+	groupArray := make([]string, 0)
+	for gr, here := range groups {
+		if here {
+			groupArray = append(groupArray, gr)
+		}
+	}
+	updateSelf.Groups = groupArray
 	gossip.wantMap[gossip.Name] = updateSelf
 	for _, status := range gossip.wantMap {
 		wants = append(wants, status)
@@ -287,6 +301,9 @@ func fastForward(origin string, gossip *Gossiper) {
 				updated = true
 				indexesDelivered = append(indexesDelivered, id)
 				gossip.orderedMessages[origin] = append(gossip.orderedMessages[origin], savedMsg)
+				for _, grp := range savedMsg.Groups {
+					gossip.groupMessages[grp] = append(gossip.groupMessages[grp], savedMsg)
+				}
 			}
 
 		}
