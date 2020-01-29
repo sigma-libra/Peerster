@@ -40,7 +40,7 @@ func makeRouteRumor(gossip *Gossiper) []byte {
 	}
 
 	groupArray := make([]string, 0)
-	for gr, here := range groups {
+	for gr, here := range Groups {
 		if here {
 			groupArray = append(groupArray, gr)
 		}

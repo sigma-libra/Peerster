@@ -3,23 +3,27 @@ package gossiper
 import (
 	"fmt"
 	"math/rand"
-	"strconv"
 )
 
-func get_peer_with_group(msg_groups[]string, gossip Gossiper) string {
+func get_peer_with_group(msg_groups []string, gossip Gossiper, message string) string {
 	//pick interested peer to send to
 	var destPeer string
 	foundNext := false
+	var matchGroup string
 
-	fmt.Println("TESTING groups: " + GroupsToString(msg_groups) + " among " + strconv.Itoa(len(gossip.groupMap)))
-	for peerName, peerGroups := range gossip.groupMap {
-		fmt.Println("TESTING PEER " + peerName + "(" + strconv.Itoa(len(peerGroups)) + " options)")
-		for _, peerGroup := range peerGroups {
-			for _, group := range msg_groups {
-				fmt.Println("TESTING " + peerGroup + " (local) vs " + group)
-				if peerGroup == group {
-					destPeer = peerName
-					foundNext = true
+	if FilterIncomingPackets && message != "" {
+		fmt.Println("FIND FORWARDING PEER FOR GROUPS " + GroupsToString(msg_groups))
+		for peerName, peerGroups := range gossip.groupMap {
+			for _, peerGroup := range peerGroups {
+				for _, group := range msg_groups {
+					if peerGroup == group {
+						destPeer = peerName
+						foundNext = true
+						matchGroup = peerGroup
+						break
+					}
+				}
+				if foundNext {
 					break
 				}
 			}
@@ -27,19 +31,18 @@ func get_peer_with_group(msg_groups[]string, gossip Gossiper) string {
 				break
 			}
 		}
-		if foundNext {
-			break
-		}
 	}
 
 	var nextPeer string
 
-	if !foundNext || destPeer == gossip.Name {
+	if !foundNext || destPeer == gossip.Name || !FilterIncomingPackets {
 		nextPeer = Keys[rand.Intn(len(Keys))]
-		fmt.Println("NEXT PEER RANDOM " + nextPeer)
+		if message != "" {
+			fmt.Println("NEXT PEER RANDOM " + nextPeer)
+		}
 	} else {
-		nextPeer = getNextHop(destPeer);
-		fmt.Println("NEXT PEER INTERESTED " + nextPeer + "(" + destPeer + ")")
+		nextPeer = getNextHop(destPeer)
+		fmt.Println("NEXT PEER INTERESTED " + nextPeer + "(" + destPeer + " with group " + matchGroup + ")")
 	}
 	return nextPeer
 }

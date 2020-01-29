@@ -17,6 +17,7 @@ func main() {
 	dest := flag.String("dest", "", "destination for the private message; ​ can be omitted")
 	request := flag.String("request", "", "request a chunk or metafile of this hash")
 	file := flag.String("file", "", "file to be indexed by the gossiper")
+	clientGroups := flag.String("groups", "", "Client message groups (group1,group2,...")
 
 	flag.Parse()
 
@@ -38,7 +39,7 @@ func main() {
 	}
 
 	if indexFileLocally || sendPrivateMessage || sendRumorMessage {
-		gossiper.SendClientMessage(msg, uiport, dest, nil, file, nil)
+		gossiper.SendClientMessage(msg, uiport, dest, nil, file, clientGroups)
 	} else {
 		fmt.Println("ERROR (Bad argument combination)")
 		os.Exit(1)

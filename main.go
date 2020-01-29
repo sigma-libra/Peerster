@@ -6,6 +6,7 @@ package main
 import (
 	"flag"
 	"github.com/SabrinaKall/Peerster/gossiper"
+
 	"net/http"
 	"strings"
 )
@@ -22,6 +23,8 @@ func main() {
 	antiEntropy := flag.Int("antiEntropy", 10, "Use the given timeout in seconds for anti-entropy. If the flag is absent, the default anti-entropy duration is 10 seconds.")
 	guiport := flag.String("GUIPort", "8080", "Port for the graphical interface")
 	rtimer := flag.Int("rtimer", 0, "Timeout in seconds to send route rumors. 0 (default) means disable sending route rumors.")
+	gossipFilterIn := flag.Bool("filterIn", true, "Peerster filter incoming packets")
+	gossipGroups := flag.String("groups", "", "Peerster groups (group1,group2,...")
 
 	flag.Parse()
 
@@ -29,6 +32,7 @@ func main() {
 	gossiper.PeerUIPort = *uiport
 	gossiper.AntiEntropy = *antiEntropy
 	gossiper.RTimer = *rtimer
+	gossiper.FilterIncomingPackets = *gossipFilterIn
 
 	peerGossiper := *gossiper.NewGossiper(*gossipAddr, *name)
 	clientGossiper := *gossiper.NewGossiper("localhost:"+*uiport, *name)
@@ -40,6 +44,13 @@ func main() {
 
 	for _, peer := range knownPeers {
 		gossiper.AddPeer(peer)
+	}
+
+	if gossipGroups != nil {
+		group_list := strings.Split(*gossipGroups, ",")
+		for _, gr := range group_list {
+			gossiper.Groups[gr] = true
+		}
 	}
 
 	gossiper.SetNodeID(*name, *uiport, *guiport)

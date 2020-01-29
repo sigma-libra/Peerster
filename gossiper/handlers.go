@@ -57,7 +57,7 @@ func GetLatestRumorMessagesHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		newMessage := r.FormValue("newMessage")
-		groups := r.FormValue("groups")
+		groups := r.FormValue("Groups")
 		dst := ""
 		SendClientMessage(&newMessage, &PeerUIPort, &dst, nil, nil, &groups)
 	default:
@@ -79,12 +79,12 @@ func GroupsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		println("Handling group")
 		newGroup := r.FormValue("group")
-		groups[newGroup] = true
+		Groups[newGroup] = true
 		fmt.Println("New group: " + newGroup)
 
 	case "GET":
 		groupString := ""
-		for group, here := range groups {
+		for group, here := range Groups {
 			if here {
 				groupString += group + "\n"
 			}

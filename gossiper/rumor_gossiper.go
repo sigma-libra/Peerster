@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/dedis/protobuf"
 	"math/rand"
-	"strconv"
 	"time"
 )
 
@@ -119,9 +118,9 @@ func HandleClientRumorMessages(clientGossiper *Gossiper, name string, peerGossip
 				groupstr += grp + ", "
 			}
 			if groupstr != "" {
-				groupstr = groupstr[:len(groupstr) - 2]
+				groupstr = groupstr[:len(groupstr)-2]
 			}
-			fmt.Println("CLIENT MESSAGE " + text + "(groups: " + groupstr + ")")
+			fmt.Println("CLIENT MESSAGE " + text + "(Groups: " + groupstr + ")")
 
 			if len(msgGroups) == 0 || (len(msgGroups) == 1 && msgGroups[0] == "") || (len(msgGroups) == 1 && msgGroups[0] == " ") {
 				fmt.Println("no group found")
@@ -146,8 +145,6 @@ func HandleClientRumorMessages(clientGossiper *Gossiper, name string, peerGossip
 			for _, grp := range msg.Groups {
 				peerGossiper.groupMessages[grp] = append(peerGossiper.groupMessages[grp], msg)
 			}
-			_, hasMessage := peerGossiper.orderedMessages[peerGossiper.Name]
-			fmt.Println("Added message: " + msg.Text + "to orderedMessages: " + strconv.FormatBool(hasMessage))
 
 			peerGossiper.mu.Unlock()
 
@@ -155,7 +152,7 @@ func HandleClientRumorMessages(clientGossiper *Gossiper, name string, peerGossip
 
 			for _, gr := range msgGroups {
 				_, known := messages[gr]
-				wanted := groups[gr]
+				wanted := Groups[gr]
 				if wanted {
 					if !known {
 						messages[gr] = msg.Origin + ": " + msg.Text + "\n"
@@ -170,12 +167,12 @@ func HandleClientRumorMessages(clientGossiper *Gossiper, name string, peerGossip
 
 			if len(KnownPeers) > 0 {
 				peerGossiper.mu.Lock()
-				nextPeer := get_peer_with_group(msg.Groups, *peerGossiper)
+				nextPeer := get_peer_with_group(msg.Groups, *peerGossiper, msg.Text)
 				peerGossiper.mu.Unlock()
 				sendPacket(newEncoded, nextPeer, peerGossiper)
 				addToMongering(nextPeer, msg.Origin, msg.ID)
 
-				fmt.Println("MONGERING with " + nextPeer)
+				//fmt.Println("MONGERING with " + nextPeer)
 
 				go statusCountDown(msg, nextPeer, peerGossiper)
 			}
@@ -207,28 +204,28 @@ func UpdateMessages(gossip *Gossiper) {
 	ticker := time.NewTicker(STATUS_COUNTDOWN_TIME * time.Second)
 	<-ticker.C
 
-	for grp, here := range groups {
-		if here {
-			_, alreadyPrinted := messages[grp]
-			if !alreadyPrinted {
-				fmt.Println("Not yet printed: " + grp)
-				gossip.mu.Lock()
-				deliveredMessages, hasMessages := gossip.groupMessages[grp]
-				gossip.mu.Unlock()
-				fmt.Println(grp + " has messages: " + strconv.FormatBool(hasMessages))
-				if hasMessages {
-					messages[grp] = ""
-					for _, oldMessage := range deliveredMessages {
-						if oldMessage.Text != "" {
-							messages[grp] += oldMessage.Origin + ": " + oldMessage.Text + "\n"
-							fmt.Println("Printed Message for " + grp)
+	if FilterIncomingPackets {
+		for grp, here := range Groups {
+			if here {
+				_, alreadyPrinted := messages[grp]
+				if !alreadyPrinted {
+					gossip.mu.Lock()
+					deliveredMessages, hasMessages := gossip.groupMessages[grp]
+					gossip.mu.Unlock()
+					if hasMessages {
+						messages[grp] = ""
+						for _, oldMessage := range deliveredMessages {
+							if oldMessage.Text != "" {
+								messages[grp] += oldMessage.Origin + ": " + oldMessage.Text + "\n"
+							}
 						}
 					}
 				}
 			}
 		}
+		go UpdateMessages(gossip)
 	}
-	go UpdateMessages(gossip)
+
 }
 
 func statusCountDown(msg RumorMessage, dst string, gossip *Gossiper) {
@@ -256,7 +253,7 @@ func statusCountDown(msg RumorMessage, dst string, gossip *Gossiper) {
 			sendPacket(encoded, randomPeer, gossip)
 			addToMongering(randomPeer, msg.Origin, msg.ID)
 
-			fmt.Println("MONGERING with " + randomPeer)
+			//fmt.Println("MONGERING with " + randomPeer)
 
 			go statusCountDown(msg, randomPeer, gossip)
 
