@@ -1,3 +1,4 @@
+//Author: Sabrina Kall
 package gossiper
 
 const FILE_FOLDER = "./_SharedFiles/"

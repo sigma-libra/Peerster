@@ -1,4 +1,6 @@
+//Author: Sabrina Kall
 package gossiper
+
 
 import (
 	"fmt"
@@ -10,7 +12,6 @@ import (
 
 func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 
-	//TODO TEST THIS
 	//if msg.Origin != gossip.Name {
 	initNode(msg.Origin, gossip)
 
@@ -101,6 +102,7 @@ func handleRumorMessage(msg *RumorMessage, sender string, gossip *Gossiper) {
 	//}
 }
 
+var statusPrinted bool
 
 func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 	printMsg := "STATUS from " + sender
@@ -117,7 +119,8 @@ func handleStatusMessage(msg *StatusPacket, sender string, gossip *Gossiper) {
 		gossip.mu.Unlock()
 	}
 
-	fmt.Println(printMsg)
+
+	//fmt.Println(printMsg)
 	//check if this is an ack
 
 	sendMessage := false
@@ -260,6 +263,9 @@ func getMessage(origin string, id uint32, gossip *Gossiper) RumorMessage {
 
 func addToMongering(dst string, origin string, ID uint32) {
 	mongerer.mu.Lock()
+	if _, originKnown := mongerer.mongeringMessages[dst]; !originKnown {
+		mongerer.mongeringMessages[dst] = make(map[string][]uint32)
+	}
 	_, wasMongering := mongerer.mongeringMessages[dst][origin]
 	if !wasMongering {
 		mongerer.mongeringMessages[dst][origin] = make([]uint32, 0)

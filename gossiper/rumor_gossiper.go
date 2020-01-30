@@ -1,3 +1,4 @@
+//Author: Sabrina Kall
 package gossiper
 
 import (
@@ -14,6 +15,8 @@ func HandleRumorMessagesFrom(gossip *Gossiper) {
 		SendRouteRumor(gossip)
 		go FireRouteRumor(gossip)
 	}
+
+	statusPrinted = false
 
 	for {
 

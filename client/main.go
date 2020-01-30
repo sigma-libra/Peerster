@@ -1,6 +1,5 @@
+//Author: Sabrina Kall
 package main
-
-//./client -UIPort=10000 -msg=Hello
 
 import (
 	"encoding/hex"

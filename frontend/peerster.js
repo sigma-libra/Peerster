@@ -1,3 +1,4 @@
+//Author: Sabrina Kall
 function add_node() {
 
     var node = document.getElementById("new_node").value;

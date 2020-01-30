@@ -1,3 +1,4 @@
+//Author: Sabrina Kall
 package gossiper
 
 import "encoding/hex"

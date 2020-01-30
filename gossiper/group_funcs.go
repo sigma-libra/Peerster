@@ -1,3 +1,4 @@
+//Author: Sabrina Kall
 package gossiper
 
 import (
@@ -14,12 +15,17 @@ func get_peer_with_group(msg_groups []string, gossip Gossiper, message string) s
 	if FilterIncomingPackets && message != "" {
 		fmt.Println("FIND FORWARDING PEER FOR GROUPS " + GroupsToString(msg_groups))
 		for peerName, peerGroups := range gossip.groupMap {
-			for _, peerGroup := range peerGroups {
-				for _, group := range msg_groups {
-					if peerGroup == group {
-						destPeer = peerName
-						foundNext = true
-						matchGroup = peerGroup
+			if peerName != gossip.Name {
+				for _, peerGroup := range peerGroups {
+					for _, group := range msg_groups {
+						if peerGroup == group {
+							destPeer = peerName
+							foundNext = true
+							matchGroup = peerGroup
+							break
+						}
+					}
+					if foundNext {
 						break
 					}
 				}
@@ -27,15 +33,12 @@ func get_peer_with_group(msg_groups []string, gossip Gossiper, message string) s
 					break
 				}
 			}
-			if foundNext {
-				break
-			}
 		}
 	}
 
 	var nextPeer string
 
-	if !foundNext || destPeer == gossip.Name || !FilterIncomingPackets {
+	if !foundNext || !FilterIncomingPackets {
 		nextPeer = Keys[rand.Intn(len(Keys))]
 		if message != "" {
 			fmt.Println("NEXT PEER RANDOM " + nextPeer)
